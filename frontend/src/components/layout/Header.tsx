@@ -15,7 +15,23 @@ function formatTime(seconds: number): string {
 }
 
 export const Header: React.FC = () => {
-  const { sessionState, sessionId, elapsedSeconds, cameraActive, micActive, fusion, startSession, stopSession, resetSession, pauseSession, resumeSession } = useSessionStore();
+  const {
+    sessionState,
+    sessionId,
+    elapsedSeconds,
+    cameraActive,
+    micActive,
+    face,
+    voice,
+    uploadedVoice,
+    text,
+    fusion,
+    startSession,
+    stopSession,
+    resetSession,
+    pauseSession,
+    resumeSession,
+  } = useSessionStore();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickTimer = useSessionStore((s) => s.tickTimer);
   const [exporting, setExporting] = useState(false);
@@ -37,7 +53,15 @@ export const Header: React.FC = () => {
     if (!sessionId) return;
     setExporting(true);
     try {
-      const result = await exportReport(sessionId);
+      const activeVoice = uploadedVoice || voice;
+      const result = await exportReport({
+        session_id: sessionId,
+        subject_label: 'Subject Alpha-01',
+        face_data: face,
+        voice_data: activeVoice,
+        text_data: text,
+        fusion_data: fusion,
+      });
       window.open(`http://localhost:8000${result.download_url}`, '_blank');
     } catch {
       console.error('Export failed');

@@ -18,7 +18,8 @@ storage/
 backend/storage/
 *.pdf
 
-# Datasets and archives (>3.5 GB)
+# Superpowers temporary assets
+.superpowers/
 *_dataset/
 *_dataset_raw/
 *.zip

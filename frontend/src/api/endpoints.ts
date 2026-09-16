@@ -1,10 +1,22 @@
 import { apiClient } from './client';
 import type {
+  FaceAnalysisData,
   FaceAnalysisResponse,
   VoiceAnalysisResponse,
   TextAnalysisResponse,
   FusionResponse,
 } from '../types';
+
+export interface ExportReportPayload {
+  session_id: string;
+  subject_label?: string;
+  include_timeline?: boolean;
+  include_transcript?: boolean;
+  face_data?: FaceAnalysisData | null;
+  voice_data?: VoiceAnalysisResponse | null;
+  text_data?: TextAnalysisResponse | null;
+  fusion_data?: FusionResponse | null;
+}
 
 // ── Face ──────────────────────────────────────────────
 export const analyzeFace = async (
@@ -70,12 +82,22 @@ export const synthesizeFusion = async (params: {
 };
 
 // ── Report Export ─────────────────────────────────────
-export const exportReport = async (sessionId: string): Promise<{ download_url: string; report_id: string }> => {
-  const { data } = await apiClient.post('/api/v1/reports/export', {
-    session_id: sessionId,
-    include_timeline: true,
-    include_transcript: true,
-  });
+export const exportReport = async (
+  payload: ExportReportPayload | string
+): Promise<{ download_url: string; report_id: string }> => {
+  const body =
+    typeof payload === 'string'
+      ? {
+          session_id: payload,
+          include_timeline: true,
+          include_transcript: true,
+        }
+      : {
+          include_timeline: true,
+          include_transcript: true,
+          ...payload,
+        };
+  const { data } = await apiClient.post('/api/v1/reports/export', body);
   return data;
 };
 
