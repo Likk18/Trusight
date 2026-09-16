@@ -30,6 +30,19 @@ export const analyzeVoice = async (
   return data;
 };
 
+export const uploadVoiceAudio = async (
+  file: File,
+  sessionId?: string
+): Promise<VoiceAnalysisResponse> => {
+  const formData = new FormData();
+  formData.append('audio', file);
+  formData.append('session_id', sessionId || 'session_upload');
+  const { data } = await apiClient.post<VoiceAnalysisResponse>('/api/v1/voice/analyze-file', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+};
+
 // ── Text ──────────────────────────────────────────────
 export const analyzeText = async (
   sessionId: string,

@@ -1,9 +1,33 @@
 node_modules/
 .venv/
+.venv*/
 venv/
+env/
 __pycache__/
 *.pyc
+*.pyo
 .env
 dist/
 build/
 .DS_Store
+logs/
+*.log
+
+# Storage & generated reports
+storage/
+backend/storage/
+*.pdf
+
+# Datasets and archives (>3.5 GB)
+*_dataset/
+*_dataset_raw/
+*.zip
+*.tar.gz
+*.tar.bz2
+*.7z
+backend/app/modules/voice/dolos_dataset/
+backend/app/modules/voice/extra_dataset_raw/
+backend/app/modules/voice/reallife_dataset_raw/
+backend/app/modules/voice/extra_dataset.zip
+backend/app/modules/voice/reallife_dataset.zip
+

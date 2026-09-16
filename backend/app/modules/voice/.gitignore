@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.venv_new/
+.venv_msc/
+venv/
+env/
+*.egg-info/
+
+# Model artifacts (keep the lightweight 831KB trained model for zero-setup runtime)
+app/models/*.pkl
+!app/models/deception_model.pkl
+
+# Uploaded/temp audio
+app/uploads/*
+!app/uploads/.gitkeep
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Env files
+.env
+
+# Numba JIT cache
+__pycache__/

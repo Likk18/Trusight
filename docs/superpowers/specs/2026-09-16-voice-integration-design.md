@@ -1,0 +1,1 @@
+﻿{"status":"completed","folder":"voice (replaced dummy)","adapter":"service.py (8244 bytes)","imports":"relative (7 files)","payload_kept":"all (datasets, zips, docs, trainers, .pkl, sample_audio)","clean":"dummy deleted; .venv_msc removed; __pycache__ trimmed","plan_file":"docs/superpowers/plans/2026-09-16-voice-integration.md"}

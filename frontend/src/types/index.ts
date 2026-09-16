@@ -33,6 +33,9 @@ export interface VoiceMetrics {
   energy_pct: number;
   hesitation_level: string;
   pauses_count: number;
+  stability_status?: string;
+  jitter_pct?: number;
+  shimmer_pct?: number;
 }
 
 export interface VoiceAnalysisResponse {
@@ -149,4 +152,12 @@ export interface HeatmapCell {
   timestamp: string;
   score: number;
   label: string;
+}
+
+export interface VoiceFeaturePoint {
+  timestamp: string;
+  truth: number;
+  hesitation: number;
+  energy: number;
+  pitchStability: number;
 }
