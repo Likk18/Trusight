@@ -1,0 +1,19 @@
+# Floating Lines Configuration for Fusion Score
+
+## Variant Green (Truth Score >= 50%):
+- Primary Color: rgba(0, 255, 136, alpha) [Neon Emerald]
+- Secondary Color: rgba(0, 212, 255, alpha) [Electric Cyan]
+- Line Count: 11 flowing ribbons
+- Speed: 0.018 (Harmonic relaxed sine oscillation)
+- Frequency: 0.012
+- Amplitude: 0.26 * height
+- Glow: 0 0 20px rgba(0, 255, 136, 0.4)
+
+## Variant Red (Truth Score < 50%):
+- Primary Color: rgba(239, 68, 68, alpha) [Crimson Red]
+- Secondary Color: rgba(249, 115, 22, alpha) [Amber Orange]
+- Line Count: 11 perturbation ribbons
+- Speed: 0.045 (High frequency micro-tremor jitter)
+- Frequency: 0.028
+- Amplitude: 0.32 * height with perturbation noise
+- Glow: 0 0 24px rgba(239, 68, 68, 0.5)

@@ -8,6 +8,7 @@ export function useSimulationSocket() {
   const ingestTelemetry = useSessionStore((s) => s.ingestTelemetry);
   const setWsConnected = useSessionStore((s) => s.setWsConnected);
   const sessionState = useSessionStore((s) => s.sessionState);
+  const tickTimer = useSessionStore((s) => s.tickTimer);
 
   useEffect(() => {
     const ws = new TelemetryWebSocket(
@@ -24,6 +25,19 @@ export function useSimulationSocket() {
       setWsConnected(false);
     };
   }, [ingestTelemetry, setWsConnected]);
+
+  // Global 1-second timer tick for the session
+  useEffect(() => {
+    let timer: number | null = null;
+    if (sessionState === 'Live_Recording') {
+      timer = window.setInterval(() => {
+        tickTimer();
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [sessionState, tickTimer]);
 
   return {
     isConnected: sessionState !== 'Idle',

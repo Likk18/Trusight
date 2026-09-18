@@ -1,53 +1,42 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useSessionStore } from '../../store/sessionStore';
 import { exportReport } from '../../api/endpoints';
-import {
-  Eye, Mic, Settings, HelpCircle, Download,
-  ChevronRight, Zap
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-  const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-  const s = (seconds % 60).toString().padStart(2, '0');
-  return `${h}:${m}:${s}`;
-}
+import { Download, Pause, Play, Square, RotateCcw } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const {
     sessionState,
     sessionId,
     elapsedSeconds,
-    cameraActive,
-    micActive,
     face,
     voice,
     uploadedVoice,
     text,
     fusion,
     startSession,
-    stopSession,
-    resetSession,
     pauseSession,
     resumeSession,
+    stopSession,
+    resetSession,
   } = useSessionStore();
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const tickTimer = useSessionStore((s) => s.tickTimer);
+
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    if (sessionState === 'Live_Recording') {
-      timerRef.current = setInterval(tickTimer, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [sessionState, tickTimer]);
+  const isLive = sessionState === 'Live_Recording';
+  const isPaused = sessionState === 'Paused';
+  const isSessionActive = isLive || isPaused;
 
-  const confidence = fusion?.fusion_confidence_pct ?? 93;
-  const confidenceLabel = confidence >= 80 ? 'HIGH' : confidence >= 55 ? 'MEDIUM' : 'LOW';
-  const confidenceColor = confidence >= 80 ? 'var(--accent-green)' : confidence >= 55 ? 'var(--accent-amber)' : 'var(--accent-red)';
+  const formatTimer = (sec: number) => {
+    const h = Math.floor(sec / 3600).toString().padStart(2, '0');
+    const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
+    const s = (sec % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
+
+  const handleStopSession = () => {
+    stopSession();
+    resetSession();
+  };
 
   const handleExport = async () => {
     if (!sessionId) return;
@@ -77,203 +66,231 @@ export const Header: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 20px',
-        height: 56,
-        background: 'linear-gradient(180deg, rgba(13, 21, 38, 0.98) 0%, rgba(10, 15, 30, 0.95) 100%)',
-        borderBottom: '1px solid rgba(30, 41, 59, 0.8)',
+        height: 52,
+        background: 'linear-gradient(180deg, rgba(3, 15, 26, 0.98) 0%, rgba(1, 13, 22, 0.95) 100%)',
+        borderBottom: '1px solid rgba(0, 212, 255, 0.25)',
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 2px 20px rgba(0,0,0,0.5)',
+        boxShadow: '0 4px 24px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(0, 212, 255, 0.15)',
       }}
     >
-      {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* ── LEFT: Logo & Brand Tagline ─────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Futuristic Circular Logo */}
         <div
           style={{
-            width: 34,
-            height: 34,
-            background: 'linear-gradient(135deg, #00d4ff 0%, #8b5cf6 100%)',
-            borderRadius: 8,
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 35% 35%, #00d4ff 0%, #0077aa 60%, #002233 100%)',
+            border: '1.5px solid rgba(0, 212, 255, 0.6)',
+            boxShadow: '0 0 14px rgba(0, 212, 255, 0.5), inset 0 0 6px rgba(255, 255, 255, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 16px rgba(0, 212, 255, 0.4)',
+            position: 'relative',
           }}
         >
-          <Eye size={18} color="#000" />
-        </div>
-        <div>
-          <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 16, color: '#fff', letterSpacing: '0.08em', lineHeight: 1 }}>
-            TRUSIGHT
-          </div>
-          <div style={{ fontSize: 9, color: '#475569', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            AI Truth Verification System
-          </div>
-        </div>
-      </div>
-
-      {/* Session Info */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        {sessionId && (
-          <>
-            {/* Session ID */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#8b5cf6', boxShadow: '0 0 6px #8b5cf6', display: 'inline-block' }} />
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: 11, color: '#94a3b8' }}>
-                Session ID: <span style={{ color: '#e2e8f0' }}>{sessionId}</span>
-              </span>
-            </div>
-
-            {/* LIVE indicator */}
-            <AnimatePresence>
-              {sessionState === 'Live_Recording' && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5 }}
-                >
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: '50%',
-                      background: '#ef4444',
-                      boxShadow: '0 0 8px #ef4444',
-                      animation: 'pulse-dot 1s ease-in-out infinite',
-                      display: 'inline-block',
-                    }}
-                  />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', letterSpacing: '0.1em' }}>LIVE</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Timer */}
-            <div style={{ fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
-              {formatTime(elapsedSeconds)}
-            </div>
-
-            {/* Confidence */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${confidenceColor}40`, borderRadius: 6 }}>
-              <span style={{ fontSize: 10, color: '#64748b' }}>Confidence</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: confidenceColor }}>● {confidenceLabel}</span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Hardware status */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px',
-            background: cameraActive ? 'rgba(0, 255, 136, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-            border: `1px solid ${cameraActive ? 'rgba(0,255,136,0.2)' : 'rgba(239,68,68,0.2)'}`,
-            borderRadius: 5, fontSize: 10, fontWeight: 600,
-            color: cameraActive ? 'var(--accent-green)' : '#ef4444',
-          }}>
-            <Eye size={10} />
-            {cameraActive ? 'Cam Active' : 'Cam Off'}
-          </div>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px',
-            background: micActive ? 'rgba(0, 255, 136, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-            border: `1px solid ${micActive ? 'rgba(0,255,136,0.2)' : 'rgba(239,68,68,0.2)'}`,
-            borderRadius: 5, fontSize: 10, fontWeight: 600,
-            color: micActive ? 'var(--accent-green)' : '#ef4444',
-          }}>
-            <Mic size={10} />
-            {micActive ? 'Mic Active' : 'Mic Off'}
-          </div>
-        </div>
-
-        {/* Session Controls */}
-        {sessionState === 'Idle' && (
-          <button
-            id="btn-start-session"
-            onClick={startSession}
+          <div
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 14px',
-              background: 'linear-gradient(135deg, #00d4ff 0%, #8b5cf6 100%)',
-              border: 'none', borderRadius: 7, cursor: 'pointer',
-              fontSize: 12, fontWeight: 700, color: '#000',
-              boxShadow: '0 0 16px rgba(0,212,255,0.3)',
-              transition: 'all 0.2s',
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: '#00ff88',
+              boxShadow: '0 0 8px #00ff88',
+            }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+          <span
+            style={{
+              fontFamily: 'Space Grotesk, Inter, sans-serif',
+              fontSize: 20,
+              fontWeight: 800,
+              color: '#ffffff',
+              letterSpacing: '-0.02em',
+              lineHeight: 1,
             }}
           >
-            <Zap size={13} />
-            Start Session
-          </button>
-        )}
-        {sessionState === 'Live_Recording' && (
-          <button
-            id="btn-pause-session"
-            onClick={pauseSession}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#f59e0b' }}
+            TruSight
+          </span>
+          <span
+            style={{
+              fontFamily: 'Space Grotesk, sans-serif',
+              fontSize: 9.5,
+              fontWeight: 700,
+              color: '#00d4ff',
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              textShadow: '0 0 8px rgba(0, 212, 255, 0.4)',
+            }}
           >
-            Pause
-          </button>
-        )}
-        {sessionState === 'Paused' && (
-          <button
-            id="btn-resume-session"
-            onClick={resumeSession}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.3)', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--accent-cyan)' }}
-          >
-            Resume
-          </button>
-        )}
-        {(sessionState === 'Live_Recording' || sessionState === 'Paused') && (
-          <button
-            id="btn-stop-session"
-            onClick={stopSession}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#ef4444' }}
-          >
-            Stop
-          </button>
-        )}
-        {(sessionState === 'Completed') && (
-          <button
-            id="btn-reset-session"
-            onClick={resetSession}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#8b5cf6' }}
-          >
-            Reset
-          </button>
-        )}
+            TRUTH BEYOND DOUBT
+          </span>
+        </div>
+      </div>
 
-        <div style={{ width: 1, height: 28, background: 'rgba(30,41,59,0.8)', margin: '0 4px' }} />
-
-        <button
-          id="btn-export-report"
-          onClick={handleExport}
-          disabled={exporting || !sessionId}
+      {/* ── CENTER: Live Session ID & Ticking Timer Pill ────────────────── */}
+      {isSessionActive && (
+        <div
           style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '6px 14px',
-            background: sessionId ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.03)',
-            border: `1px solid ${sessionId ? 'rgba(0,212,255,0.3)' : 'rgba(30,41,59,0.4)'}`,
-            borderRadius: 7, cursor: sessionId ? 'pointer' : 'not-allowed',
-            fontSize: 12, fontWeight: 600,
-            color: sessionId ? 'var(--accent-cyan)' : '#475569',
-            transition: 'all 0.2s',
-            opacity: exporting ? 0.7 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: 'rgba(0, 20, 34, 0.85)',
+            border: '1px solid rgba(0, 212, 255, 0.3)',
+            borderRadius: 20,
+            padding: '4px 14px',
+            boxShadow: '0 0 16px rgba(0, 212, 255, 0.15)',
           }}
         >
-          <Download size={13} />
-          {exporting ? 'Generating...' : 'Export Report'}
-          <ChevronRight size={11} />
-        </button>
+          <span
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: isLive ? '#ef4444' : '#f59e0b',
+              boxShadow: isLive ? '0 0 8px #ef4444' : '0 0 6px #f59e0b',
+              animation: isLive ? 'pulse-dot 1s infinite' : 'none',
+            }}
+          />
+          <span style={{ fontFamily: 'Space Grotesk', fontSize: 10.5, fontWeight: 700, color: isLive ? '#ef4444' : '#f59e0b' }}>
+            {isLive ? 'LIVE' : 'PAUSED'}
+          </span>
+          <span style={{ color: '#334155' }}>|</span>
+          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: '#94a3b8' }}>
+            #{sessionId || 'sess_01'}
+          </span>
+          <span style={{ color: '#334155' }}>|</span>
+          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 700, color: '#00ff88' }}>
+            {formatTimer(elapsedSeconds)}
+          </span>
+        </div>
+      )}
 
-        <button id="btn-settings" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', padding: 4 }}>
-          <Settings size={16} />
-        </button>
-        <button id="btn-help" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', padding: 4 }}>
-          <HelpCircle size={16} />
+      {/* ── RIGHT: Action Controls ─────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* If Idle: Start Session Button with matching sleek Resume button design */}
+        {!isSessionActive && (
+          <button
+            onClick={startSession}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(0, 212, 255, 0.12)',
+              color: '#00d4ff',
+              border: '1px solid rgba(0, 212, 255, 0.35)',
+              borderRadius: 6,
+              padding: '6px 14px',
+              fontSize: 11.5,
+              fontWeight: 700,
+              fontFamily: 'Space Grotesk, sans-serif',
+              cursor: 'pointer',
+              boxShadow: '0 0 12px rgba(0, 212, 255, 0.15)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Play size={11} fill="#00d4ff" />
+            <span>Start Session</span>
+          </button>
+        )}
+
+        {/* If Active Session: Pause/Resume, Stop (Resets to Idle), and Reset */}
+        {isSessionActive && (
+          <>
+            {/* Pause / Resume Button */}
+            <button
+              onClick={isLive ? pauseSession : resumeSession}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                background: 'rgba(0, 212, 255, 0.12)',
+                color: '#00d4ff',
+                border: '1px solid rgba(0, 212, 255, 0.35)',
+                borderRadius: 6,
+                padding: '5px 12px',
+                fontSize: 11,
+                fontWeight: 700,
+                fontFamily: 'Space Grotesk, sans-serif',
+                cursor: 'pointer',
+              }}
+            >
+              {isLive ? <Pause size={11} /> : <Play size={11} fill="#00d4ff" />}
+              <span>{isLive ? 'Pause' : 'Resume'}</span>
+            </button>
+
+            {/* Stop Button (Immediately returns to Idle state) */}
+            <button
+              onClick={handleStopSession}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 6,
+                padding: '5px 12px',
+                fontSize: 11,
+                fontWeight: 800,
+                fontFamily: 'Space Grotesk, sans-serif',
+                cursor: 'pointer',
+                boxShadow: '0 0 14px rgba(239, 68, 68, 0.4)',
+              }}
+            >
+              <Square size={10} fill="#fff" />
+              <span>Stop</span>
+            </button>
+
+            {/* Reset Button */}
+            <button
+              onClick={resetSession}
+              title="Reset Session"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                background: 'rgba(30, 41, 59, 0.6)',
+                color: '#94a3b8',
+                border: '1px solid rgba(51, 65, 85, 0.6)',
+                borderRadius: 6,
+                padding: '5px 8px',
+                fontSize: 11,
+                cursor: 'pointer',
+              }}
+            >
+              <RotateCcw size={11} />
+            </button>
+          </>
+        )}
+
+        {/* Export PDF Button */}
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'rgba(10, 24, 38, 0.75)',
+            color: '#e2e8f0',
+            border: '1px solid rgba(0, 212, 255, 0.35)',
+            borderRadius: 6,
+            padding: '6px 12px',
+            fontSize: 11.5,
+            fontWeight: 700,
+            fontFamily: 'Space Grotesk, sans-serif',
+            cursor: 'pointer',
+            backdropFilter: 'blur(8px)',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <Download size={12} color="#00d4ff" />
+          <span>{exporting ? 'Exporting...' : 'Export PDF ›'}</span>
         </button>
       </div>
     </header>

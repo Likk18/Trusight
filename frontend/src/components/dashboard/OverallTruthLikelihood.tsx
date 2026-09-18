@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSessionStore } from '../../store/sessionStore';
 import { ArcGauge } from '../fusion/ArcGauge';
+import { FloatingLines } from '../fusion/FloatingLines';
 import { ShieldCheck } from 'lucide-react';
 
 export const OverallTruthLikelihood: React.FC = () => {
@@ -33,7 +34,7 @@ export const OverallTruthLikelihood: React.FC = () => {
       }}
     >
       {/* Top Header: Title on Left, Compact 10s Timer & Verdict in Top-Right Corner */}
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(30, 41, 59, 0.6)', paddingBottom: 4, zIndex: 1 }}>
+      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(30, 41, 59, 0.6)', paddingBottom: 4, zIndex: 2 }}>
         <div>
           <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 13, fontWeight: 800, color: '#F8FAFC' }}>
             Fusion Score
@@ -75,26 +76,42 @@ export const OverallTruthLikelihood: React.FC = () => {
           </div>
 
           {/* Verdict Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '2px 5px', borderRadius: 4 }}>
-            <ShieldCheck size={9.5} color="#10B981" />
-            <span style={{ fontSize: 8.5, fontWeight: 700, color: '#10B981', fontFamily: 'Space Grotesk' }}>{verdict}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: score >= 50 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', border: score >= 50 ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)', padding: '2px 5px', borderRadius: 4 }}>
+            <ShieldCheck size={9.5} color={score >= 50 ? '#10B981' : '#ef4444'} />
+            <span style={{ fontSize: 8.5, fontWeight: 700, color: score >= 50 ? '#10B981' : '#ef4444', fontFamily: 'Space Grotesk' }}>{verdict}</span>
           </div>
         </div>
       </div>
 
-      {/* Center: Arc Gauge */}
+      {/* Center: Arc Gauge with Dynamic Floating Lines Background */}
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', minHeight: 0, zIndex: 1 }}>
-        <div style={{ transform: 'scale(0.88)', transformOrigin: 'center 60%', height: 125, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* Animated Three.js Floating Lines Component (Green >=50%, Red <50%) */}
+        <FloatingLines
+          key={score >= 50 ? 'green-config' : 'red-config'}
+          enabledWaves="middle,bottom,top"
+          lineCount={8}
+          lineDistance={8}
+          bendRadius={8}
+          bendStrength={-2}
+          interactive={true}
+          parallax={true}
+          animationSpeed={1}
+          gradientStart={score >= 50 ? '#53f545' : '#f54545'}
+          gradientMid={score >= 50 ? '#1d8a17' : '#8a1717'}
+          gradientEnd={score >= 50 ? '#69a763' : '#a76363'}
+        />
+
+        <div style={{ transform: 'scale(0.88)', transformOrigin: 'center 60%', height: 125, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
           <ArcGauge score={score} size={220} />
         </div>
 
         {/* Center Score Overlay */}
-        <div style={{ position: 'absolute', bottom: 6, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ position: 'absolute', bottom: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2 }}>
           <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 22, fontWeight: 900, color: '#F8FAFC', lineHeight: 1 }}>
             {Math.round(score)}%
           </span>
           <span style={{ fontSize: 8.5, color: '#64748B', marginTop: 1, fontWeight: 700, fontFamily: 'Space Grotesk' }}>
-            CONFIDENCE 93%
+            CONFIDENCE {fusion?.fusion_confidence_pct ? Math.round(fusion.fusion_confidence_pct) : 93}%
           </span>
         </div>
       </div>

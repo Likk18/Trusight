@@ -1,14 +1,15 @@
 import React from 'react';
 import { Header } from './components/layout/Header';
-import { FacePanel } from './components/face/FacePanel';
-import { FusionPanel } from './components/fusion/FusionPanel';
-import { VoicePanel } from './components/voice/VoicePanel';
-import { TranscriptPanel } from './components/text/TranscriptPanel';
-import { ModelAgreement } from './components/dashboard/ModelAgreement';
-import { TruthScoreChart } from './components/charts/TruthScoreChart';
-import { ModelScoreChart } from './components/charts/ModelScoreChart';
-import { TimelineHeatmap } from './components/charts/TimelineHeatmap';
-import { SystemStatus } from './components/dashboard/SystemStatus';
+import { TopFusionChart } from './components/dashboard/TopFusionChart';
+import { TopContributingFactors } from './components/dashboard/TopContributingFactors';
+import { LiveCameraCard } from './components/dashboard/LiveCameraCard';
+import { TruthAnalysisCard } from './components/dashboard/TruthAnalysisCard';
+import { FusionScoreCard } from './components/dashboard/FusionScoreCard';
+import { LiveTranscriptStrip } from './components/dashboard/LiveTranscriptStrip';
+import { FacialSignalsCard } from './components/dashboard/FacialSignalsCard';
+import { VocalSignalsCard } from './components/dashboard/VocalSignalsCard';
+import { LinguisticSignalsCard } from './components/dashboard/LinguisticSignalsCard';
+import { Footer } from './components/layout/Footer';
 import { useSimulationSocket } from './hooks/useSimulationSocket';
 import './index.css';
 
@@ -17,61 +18,84 @@ const App: React.FC = () => {
   useSimulationSocket();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        maxHeight: '100vh',
+        width: '100vw',
+        maxWidth: '100vw',
+        overflow: 'hidden',
+        background: '#010d16',
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+      }}
+    >
+      {/* ── 1. TOP NAVIGATION / HEADER ───────────────────────────────── */}
       <Header />
 
+      {/* ── MAIN DASHBOARD MATRIX (Locked Zero-Scroll Viewport) ──────── */}
       <main
         style={{
           flex: 1,
-          padding: '10px 12px 12px',
+          padding: '6px 14px 6px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 10,
+          gap: 6,
           minHeight: 0,
+          overflow: 'hidden',
         }}
       >
-        {/* ── TIER 1: Top Analysis Row (25% | 50% | 25%) ─────────────────── */}
+        {/* ── 2. TOP ANALYTICS ROW (Fusion Score 65% | Factors 35%) ────── */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1.8fr 1fr',
-            gap: 10,
-            height: 440,
+            gridTemplateColumns: '1.85fr 1fr',
+            gap: 6,
+            flex: '1.15 1 0',
+            minHeight: 0,
           }}
         >
-          <FacePanel />
-          <FusionPanel />
-          <VoicePanel />
+          <TopFusionChart />
+          <TopContributingFactors />
         </div>
 
-        {/* ── TIER 2: Middle Analysis Row (60% | 40%) ────────────────────── */}
+        {/* ── 3. MAIN ANALYSIS ROW (Camera 31% | Truth 37% | Fusion 32%) ─ */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.5fr 1fr',
-            gap: 10,
-            height: 310,
+            gridTemplateColumns: '1.05fr 1.25fr 1.05fr',
+            gap: 6,
+            flex: '1.45 1 0',
+            minHeight: 0,
           }}
         >
-          <TranscriptPanel />
-          <ModelAgreement />
+          <LiveCameraCard />
+          <TruthAnalysisCard />
+          <FusionScoreCard />
         </div>
 
-        {/* ── TIER 3: Bottom Analytics Row (equal 4 columns) ─────────────── */}
+        {/* ── 4. LIVE TRANSCRIPT STRIP (Full-Width 44px) ───────────────── */}
+        <LiveTranscriptStrip />
+
+        {/* ── 5. THREE SIGNAL ANALYTICS CHARTS (33.3% | 33.3% | 33.3%) ─── */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 1fr',
-            gap: 10,
-            height: 200,
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: 6,
+            flex: '1.1 1 0',
+            minHeight: 0,
           }}
         >
-          <TruthScoreChart />
-          <ModelScoreChart />
-          <TimelineHeatmap />
-          <SystemStatus />
+          <FacialSignalsCard />
+          <VocalSignalsCard />
+          <LinguisticSignalsCard />
         </div>
       </main>
+
+      {/* ── 6. BOTTOM FOOTER ─────────────────────────────────────────── */}
+      <Footer />
     </div>
   );
 };
