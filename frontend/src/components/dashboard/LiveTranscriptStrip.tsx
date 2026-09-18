@@ -34,7 +34,7 @@ export const LiveTranscriptStrip: React.FC = () => {
       }}
     >
       {/* ── LEFT: Icon, Title, Timer, Subject, and Transcript ──────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
         {/* Purple Document Icon */}
         <div
           style={{
@@ -69,7 +69,7 @@ export const LiveTranscriptStrip: React.FC = () => {
         <span
           style={{
             fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
+            fontSize: 10.5,
             fontWeight: 600,
             color: '#64748b',
             whiteSpace: 'nowrap',

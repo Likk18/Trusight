@@ -11,10 +11,12 @@ export function useUserMedia(): UseUserMediaResult {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const setCameraActive = useSessionStore((s) => s.setCameraActive);
-  const setMicActive = useSessionStore((s) => s.setMicActive);
 
   const startCamera = useCallback(async () => {
     try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
         audio: false,
@@ -26,23 +28,12 @@ export function useUserMedia(): UseUserMediaResult {
         videoRef.current.play().catch(console.error);
       }
 
-      const hasVideo = stream.getVideoTracks().length > 0;
-      setCameraActive(hasVideo);
-
-      // Attempt optional audio stream for microphone without blocking video
-      try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const hasAudio = audioStream.getAudioTracks().length > 0;
-        setMicActive(hasAudio);
-      } catch {
-        setMicActive(false);
-      }
+      setCameraActive(true);
     } catch (err) {
       console.warn('[useUserMedia] Video permission denied or device unavailable:', err);
       setCameraActive(false);
-      setMicActive(false);
     }
-  }, [setCameraActive, setMicActive]);
+  }, [setCameraActive]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -53,8 +44,7 @@ export function useUserMedia(): UseUserMediaResult {
       videoRef.current.srcObject = null;
     }
     setCameraActive(false);
-    setMicActive(false);
-  }, [setCameraActive, setMicActive]);
+  }, [setCameraActive]);
 
   useEffect(() => {
     return () => {

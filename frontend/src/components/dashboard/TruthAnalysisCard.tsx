@@ -1,16 +1,15 @@
 import React from 'react';
 import { useSessionStore } from '../../store/sessionStore';
-import { Activity, Smile, Mic, FileText } from 'lucide-react';
+import { Smile, Mic, FileText } from 'lucide-react';
 
 interface ModalityGaugeProps {
   label: string;
   score: number;
-  delta: number;
   color: string;
   icon: React.ReactNode;
 }
 
-const ModalityGauge: React.FC<ModalityGaugeProps> = ({ label, score, delta, color, icon }) => {
+const ModalityGauge: React.FC<ModalityGaugeProps> = ({ label, score, color, icon }) => {
   const radius = 44;
   const stroke = 7.5;
   const normalizedRadius = radius - stroke / 2;
@@ -18,7 +17,7 @@ const ModalityGauge: React.FC<ModalityGaugeProps> = ({ label, score, delta, colo
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       {/* Circular Progress Arc */}
       <div style={{ position: 'relative', width: radius * 2, height: radius * 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <svg height={radius * 2} width={radius * 2} style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
@@ -71,7 +70,7 @@ const ModalityGauge: React.FC<ModalityGaugeProps> = ({ label, score, delta, colo
         <span
           style={{
             fontFamily: 'Space Grotesk, sans-serif',
-            fontSize: 10.5,
+            fontSize: 11,
             fontWeight: 700,
             color: '#cbd5e1',
             whiteSpace: 'nowrap',
@@ -79,22 +78,6 @@ const ModalityGauge: React.FC<ModalityGaugeProps> = ({ label, score, delta, colo
         >
           {label}
         </span>
-      </div>
-
-      {/* Delta Indicator */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          fontSize: 9,
-          fontFamily: 'JetBrains Mono, monospace',
-          fontWeight: 700,
-          color: '#00ff88',
-        }}
-      >
-        <span>△</span>
-        <span>{delta}%</span>
       </div>
     </div>
   );
@@ -104,10 +87,13 @@ export const TruthAnalysisCard: React.FC = () => {
   const face = useSessionStore((s) => s.face);
   const voice = useSessionStore((s) => s.voice);
   const text = useSessionStore((s) => s.text);
+  const segmentElapsed = useSessionStore((s) => s.segmentElapsed);
 
   const faceScore = face?.face_score ?? 82;
   const voiceScore = voice ? 100 - voice.deception_score : 67;
   const textScore = text?.text_score ?? 81;
+
+  const progressPct = (segmentElapsed / 10) * 100;
 
   return (
     <div
@@ -126,7 +112,7 @@ export const TruthAnalysisCard: React.FC = () => {
         justifyContent: 'space-between',
       }}
     >
-      {/* ── Clean Header (No Emoji / Icons) ──────────────────────────── */}
+      {/* ── Clean Header with Accurate 10s Countdown Timer ───────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
         <div>
           <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 13, fontWeight: 800, color: '#F8FAFC' }}>
@@ -137,46 +123,65 @@ export const TruthAnalysisCard: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(0, 212, 255, 0.08)', border: '1px solid rgba(0, 212, 255, 0.25)', borderRadius: 4, padding: '2px 6px' }}>
-          <Activity size={10} color="#00d4ff" />
-          <span style={{ fontSize: 8, color: '#00d4ff', fontWeight: 600, fontFamily: 'Space Grotesk' }}>
-            Analyzing in real-time
+        {/* Accurate 10s Window Timer & Countdown Progress Bar */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            background: 'rgba(0, 20, 34, 0.9)',
+            border: '1px solid rgba(0, 212, 255, 0.35)',
+            borderRadius: 4,
+            padding: '2px 7px',
+          }}
+        >
+          <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#00d4ff', animation: 'pulse-dot 1s infinite' }} />
+          <span style={{ fontSize: 8.5, color: '#00d4ff', fontWeight: 700, fontFamily: 'Space Grotesk' }}>
+            10s: {segmentElapsed.toString().padStart(2, '0')}s
           </span>
+          <div style={{ width: 18, height: 3, background: 'rgba(51, 65, 85, 0.8)', borderRadius: 1.5, overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${progressPct}%`,
+                background: '#00d4ff',
+                boxShadow: '0 0 4px #00d4ff',
+                transition: 'width 0.9s linear',
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* ── 3 Horizontal Circular Gauges (Slightly Bigger & Filling Space) ── */}
+      {/* ── 3 Horizontal Circular Gauges (Clean, No Delta Increase) ────── */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-around',
           alignItems: 'center',
           flex: 1,
-          padding: '4px 0',
+          padding: '6px 0',
         }}
       >
         <ModalityGauge
           label="Facial Truth"
           score={faceScore}
-          delta={12}
           color="#00d4ff"
-          icon={<Smile size={11} />}
+          icon={<Smile size={12} />}
         />
 
         <ModalityGauge
           label="Vocal Truth"
           score={voiceScore}
-          delta={8}
           color="#3b82f6"
-          icon={<Mic size={11} />}
+          icon={<Mic size={12} />}
         />
 
         <ModalityGauge
           label="Factual Truth"
           score={textScore}
-          delta={15}
           color="#8b5cf6"
-          icon={<FileText size={11} />}
+          icon={<FileText size={12} />}
         />
       </div>
     </div>

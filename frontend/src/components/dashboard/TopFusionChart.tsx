@@ -14,26 +14,11 @@ import { useSessionStore } from '../../store/sessionStore';
 export const TopFusionChart: React.FC = () => {
   const truthScoreHistory = useSessionStore((s) => s.truthScoreHistory);
 
-  // Generate realistic time-series points if history is short
-  const data = truthScoreHistory.length >= 10
-    ? truthScoreHistory.map((p, i) => ({
-        time: p.timestamp,
-        value: p.value / 100,
-        isEvent: i === Math.floor(truthScoreHistory.length * 0.75),
-      }))
-    : [
-        { time: '00:00', value: 0.68 },
-        { time: '01:30', value: 0.72 },
-        { time: '03:00', value: 0.76 },
-        { time: '04:30', value: 0.65 },
-        { time: '06:00', value: 0.58 },
-        { time: '07:30', value: 0.70 },
-        { time: '09:00', value: 0.78 },
-        { time: '10:50', value: 0.84, isEvent: true },
-        { time: '12:00', value: 0.74 },
-        { time: '13:30', value: 0.79 },
-        { time: '15:00', value: 0.74 },
-      ];
+  // Progressive 10s linear plotting (starts empty, appends every 10s)
+  const data = truthScoreHistory.map((p) => ({
+    time: p.timestamp,
+    value: Number((p.value / 100).toFixed(2)),
+  }));
 
   return (
     <div
@@ -53,40 +38,20 @@ export const TopFusionChart: React.FC = () => {
     >
       {/* ── Card Header ──────────────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ color: '#00d4ff', fontSize: 12, fontWeight: 900 }}>▰</span>
-          <span
-            style={{
-              fontFamily: 'Space Grotesk, sans-serif',
-              fontSize: 13,
-              fontWeight: 800,
-              color: '#F8FAFC',
-              letterSpacing: '0.02em',
-            }}
-          >
-            Fusion Score
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span
-            style={{
-              fontFamily: 'Space Grotesk, JetBrains Mono',
-              fontSize: 11,
-              fontWeight: 700,
-              color: '#00ff88',
-              background: 'rgba(0, 255, 136, 0.12)',
-              border: '1px solid rgba(0, 255, 136, 0.3)',
-              padding: '1px 6px',
-              borderRadius: 4,
-            }}
-          >
-            ↑ 10%
-          </span>
-        </div>
+        <span
+          style={{
+            fontFamily: 'Space Grotesk, sans-serif',
+            fontSize: 13,
+            fontWeight: 800,
+            color: '#F8FAFC',
+            letterSpacing: '0.02em',
+          }}
+        >
+          Fusion Score
+        </span>
       </div>
 
-      {/* ── Time-Series Chart (Full Edge-to-Edge Coverage) ───────────── */}
+      {/* ── Time-Series Linear Overlapping Area Chart (No Dots) ───────── */}
       <div style={{ flex: 1, minHeight: 0, width: '100%', position: 'relative' }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 6, right: 10, left: -25, bottom: 0 }}>
@@ -114,11 +79,11 @@ export const TopFusionChart: React.FC = () => {
               fontSize={8.5}
               tickLine={false}
               axisLine={{ stroke: 'rgba(30, 41, 59, 0.8)' }}
-              tickFormatter={(v) => v.toFixed(1)}
+              tickFormatter={(v) => v.toFixed(2)}
             />
 
             <Tooltip
-              formatter={(value: any) => [`${(Number(value) * 100).toFixed(0)}%`, 'Fusion Truth']}
+              formatter={(value: any) => [`${Number(value).toFixed(2)}`, 'Fusion Score']}
               labelFormatter={(label) => `Time: ${label}`}
               contentStyle={{
                 background: '#091522',
@@ -136,7 +101,7 @@ export const TopFusionChart: React.FC = () => {
               strokeDasharray="4 4"
               strokeWidth={1}
               label={{
-                value: 'Threshold (0.5)',
+                value: 'Threshold (0.50)',
                 position: 'insideBottomRight',
                 fill: '#94a3b8',
                 fontSize: 8.5,
@@ -144,43 +109,15 @@ export const TopFusionChart: React.FC = () => {
               }}
             />
 
-            {/* Event Marker at 10:50 */}
-            <ReferenceLine
-              x="10:50"
-              stroke="#00ff88"
-              strokeWidth={1.5}
-              strokeDasharray="2 2"
-              label={{
-                value: 'Event: Claim Peak',
-                position: 'top',
-                fill: '#00ff88',
-                fontSize: 8,
-              }}
-            />
-
             <Area
-              type="monotone"
+              type="linear"
               dataKey="value"
               stroke="#00ff88"
               strokeWidth={2}
               fill="url(#topFusionGreenGrad)"
-              dot={(props: any) => {
-                if (props.payload.isEvent || props.payload.time === '10:50') {
-                  return (
-                    <circle
-                      key={props.index}
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={4.5}
-                      fill="#00ff88"
-                      stroke="#ffffff"
-                      strokeWidth={1.5}
-                      style={{ filter: 'drop-shadow(0 0 6px #00ff88)' }}
-                    />
-                  );
-                }
-                return <React.Fragment key={props.index} />;
-              }}
+              isAnimationActive={false}
+              dot={false}
+              activeDot={{ r: 4, fill: '#00ff88', stroke: '#fff', strokeWidth: 1.5 }}
             />
           </AreaChart>
         </ResponsiveContainer>

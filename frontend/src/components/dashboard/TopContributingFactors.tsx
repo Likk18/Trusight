@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { ChevronDown } from 'lucide-react';
 
 interface FactorItem {
   name: string;
@@ -23,118 +23,97 @@ export const TopContributingFactors: React.FC = () => {
         background: '#001422',
         border: '1px solid rgba(0, 212, 255, 0.25)',
         borderRadius: 8,
-        padding: '6px 12px 6px',
+        padding: '10px 14px',
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         minHeight: 0,
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.45)',
-        justifyContent: 'space-between',
       }}
     >
       {/* ── Header ───────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ color: '#00d4ff', fontSize: 12, fontWeight: 900 }}>▥</span>
-          <span
-            style={{
-              fontFamily: 'Space Grotesk, sans-serif',
-              fontSize: 13,
-              fontWeight: 800,
-              color: '#F8FAFC',
-              letterSpacing: '0.02em',
-            }}
-          >
-            Top Contributing Factors
-          </span>
-        </div>
-
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <span
+          style={{
+            fontFamily: 'Space Grotesk, sans-serif',
+            fontSize: 13,
+            fontWeight: 800,
+            color: '#F8FAFC',
+            letterSpacing: '0.02em',
+          }}
+        >
+          Top Contributing Factors
+        </span>
         <button
+          onClick={() => {}} // Placeholder for potential expand/collapse functionality
           style={{
             background: 'none',
             border: 'none',
             color: '#64748b',
-            fontSize: 9.5,
-            fontWeight: 700,
-            fontFamily: 'Space Grotesk, sans-serif',
-            cursor: 'pointer',
+            padding: 0,
+            width: 24,
+            height: 24,
             display: 'flex',
             alignItems: 'center',
-            gap: 2,
-            transition: 'color 0.2s',
+            justifyContent: 'center',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#00d4ff')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
         >
-          View Details →
+          <ChevronDown size={14} />
         </button>
       </div>
 
-      {/* ── 5 Factor Progress Rows (Edge-to-Edge Expansion) ──────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, justifyContent: 'space-around' }}>
-        {FACTORS.map((factor) => {
-          // Normalize bar width relative to max 30%
-          const barWidth = Math.min(100, (factor.percentage / 30) * 100);
+      {/* ── Factors List ─────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {FACTORS.map((factor, index) => (
+          <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+            {/* Factor Name */}
+            <span
+              style={{
+                width: '40%',
+                fontSize: 12,
+                color: '#94a3b8',
+                fontFamily: 'Space Grotesk, sans-serif',
+              }}
+            >
+              {factor.name}
+            </span>
 
-          return (
-            <div key={factor.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {/* Factor Name */}
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: '#cbd5e1',
-                  width: 135,
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {factor.name}
-              </span>
-
-              {/* Progress Track */}
+            {/* Progress Bar Container */}
+            <div
+              style={{
+                flex: 1,
+                height: 6,
+                background: 'rgba(0, 20, 34, 0.5)',
+                borderRadius: 3,
+                overflow: 'hidden',
+                margin: '0 10px',
+              }}
+            >
               <div
                 style={{
-                  flex: 1,
-                  height: 7,
-                  background: 'rgba(30, 41, 59, 0.6)',
-                  borderRadius: 4,
-                  overflow: 'hidden',
-                  position: 'relative',
+                  width: `${factor.percentage}%`,
+                  height: '100%',
+                  background: factor.color,
+                  transition: 'width 0.3s ease',
                 }}
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${barWidth}%` }}
-                  transition={{ duration: 0.8, ease: 'easeOut' }}
-                  style={{
-                    height: '100%',
-                    borderRadius: 4,
-                    background: factor.isPositive
-                      ? `linear-gradient(90deg, ${factor.color}60, ${factor.color})`
-                      : 'linear-gradient(90deg, #ef4444, #dc2626)',
-                    boxShadow: `0 0 8px ${factor.color}40`,
-                  }}
-                />
-              </div>
-
-              {/* Percentage Value */}
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  fontFamily: 'JetBrains Mono, monospace',
-                  color: factor.isPositive ? factor.color : '#ef4444',
-                  width: 34,
-                  textAlign: 'right',
-                  flexShrink: 0,
-                }}
-              >
-                {factor.isPositive ? `+${factor.percentage}%` : `-${factor.percentage}%`}
-              </span>
+              />
             </div>
-          );
-        })}
+
+            {/* Percentage Value */}
+            <span
+              style={{
+                width: '20%',
+                textAlign: 'right',
+                fontSize: 12,
+                color: factor.isPositive ? '#00ff88' : '#ef4444',
+                fontFamily: 'Space Grotesk, sans-serif',
+                fontWeight: 600,
+              }}
+            >
+              {factor.percentage}%
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

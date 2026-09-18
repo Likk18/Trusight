@@ -172,7 +172,7 @@ export const Header: React.FC = () => {
 
       {/* ── RIGHT: Action Controls ─────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* If Idle: Start Session Button with matching sleek Resume button design */}
+        {/* If Idle: Start Session Button */}
         {!isSessionActive && (
           <button
             onClick={startSession}
@@ -198,10 +198,9 @@ export const Header: React.FC = () => {
           </button>
         )}
 
-        {/* If Active Session: Pause/Resume, Stop (Resets to Idle), and Reset */}
+        {/* If Active Session: Pause/Resume, Stop, and Reset */}
         {isSessionActive && (
           <>
-            {/* Pause / Resume Button */}
             <button
               onClick={isLive ? pauseSession : resumeSession}
               style={{
@@ -223,7 +222,6 @@ export const Header: React.FC = () => {
               <span>{isLive ? 'Pause' : 'Resume'}</span>
             </button>
 
-            {/* Stop Button (Immediately returns to Idle state) */}
             <button
               onClick={handleStopSession}
               style={{
@@ -246,7 +244,6 @@ export const Header: React.FC = () => {
               <span>Stop</span>
             </button>
 
-            {/* Reset Button */}
             <button
               onClick={resetSession}
               title="Reset Session"

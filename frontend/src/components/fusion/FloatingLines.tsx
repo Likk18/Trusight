@@ -295,6 +295,7 @@ export const FloatingLines: React.FC<FloatingLinesProps> = ({
   lightMode = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const uniformsRef = useRef<Record<string, any> | null>(null);
   const targetMouseRef = useRef(new Vector2(-1000, -1000));
   const currentMouseRef = useRef(new Vector2(-1000, -1000));
   const targetInfluenceRef = useRef(0);
@@ -338,6 +339,21 @@ export const FloatingLines: React.FC<FloatingLinesProps> = ({
   const topLineDistance = parsedWaves.includes('top') ? getLineDistance('top') * 0.01 : 0.01;
   const middleLineDistance = parsedWaves.includes('middle') ? getLineDistance('middle') * 0.01 : 0.01;
   const bottomLineDistance = parsedWaves.includes('bottom') ? getLineDistance('bottom') * 0.01 : 0.01;
+
+  // Update dynamic gradient uniforms in-place without tearing down WebGL context
+  useEffect(() => {
+    if (!uniformsRef.current) return;
+    const uniforms = uniformsRef.current;
+    if (resolvedGradient && resolvedGradient.length > 0) {
+      const stops = resolvedGradient.slice(0, MAX_GRADIENT_STOPS);
+      uniforms.lineGradientCount.value = stops.length;
+      stops.forEach((hex, i) => {
+        const color = hexToVec3(hex);
+        uniforms.lineGradient.value[i].set(color.x, color.y, color.z);
+      });
+    }
+    uniforms.animationSpeed.value = animationSpeed;
+  }, [resolvedGradient, animationSpeed]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -418,6 +434,8 @@ export const FloatingLines: React.FC<FloatingLinesProps> = ({
         uniforms.lineGradient.value[i].set(color.x, color.y, color.z);
       });
     }
+
+    uniformsRef.current = uniforms;
 
     const material = new ShaderMaterial({
       uniforms,
@@ -509,6 +527,7 @@ export const FloatingLines: React.FC<FloatingLinesProps> = ({
 
     return () => {
       active = false;
+      uniformsRef.current = null;
 
       cancelAnimationFrame(raf);
 
@@ -527,28 +546,7 @@ export const FloatingLines: React.FC<FloatingLinesProps> = ({
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    linesGradient,
-    gradientStart,
-    gradientMid,
-    gradientEnd,
-    enabledWaves,
-    lineCount,
-    lineDistance,
-    topWavePosition,
-    middleWavePosition,
-    bottomWavePosition,
-    animationSpeed,
-    interactive,
-    bendRadius,
-    bendStrength,
-    mouseDamping,
-    parallax,
-    parallaxStrength,
-    backgroundColor,
-    lightMode,
-  ]);
+  }, []);
 
   return (
     <div

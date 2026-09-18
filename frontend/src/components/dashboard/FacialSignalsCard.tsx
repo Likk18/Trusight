@@ -1,8 +1,8 @@
 import React from 'react';
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -13,20 +13,7 @@ import { Smile } from 'lucide-react';
 import { useSessionStore } from '../../store/sessionStore';
 
 export const FacialSignalsCard: React.FC = () => {
-  const face = useSessionStore((s) => s.face);
-
-  const eyeContact = face ? face.metrics.eye_contact_pct / 100 : 0.82;
-  const blinkRate = face?.metrics.blink_rate_status === 'Normal' ? 0.45 : 0.75;
-  const headStability = face ? face.metrics.head_stability_pct / 100 : 0.88;
-  const tension = face ? face.metrics.facial_tension_pct / 100 : 0.22;
-
-  const data = Array.from({ length: 12 }, (_, i) => ({
-    time: `0${Math.floor(i * 1.2)}:00`,
-    eyeContact: Math.min(1, Math.max(0.1, eyeContact + Math.sin(i * 0.7) * 0.08)),
-    blinkRate: Math.min(1, Math.max(0.1, blinkRate + Math.cos(i * 0.8) * 0.1)),
-    headStability: Math.min(1, Math.max(0.1, headStability + Math.sin(i * 0.5) * 0.06)),
-    facialTension: Math.min(1, Math.max(0.05, tension + Math.cos(i * 0.9) * 0.07)),
-  }));
+  const facialSignalsHistory = useSessionStore((s) => s.facialSignalsHistory);
 
   return (
     <div
@@ -72,10 +59,29 @@ export const FacialSignalsCard: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Multi-Line Signal Chart (Full Coverage) ──────────────────── */}
+      {/* ── Overlapping Multi-Area Signal Chart (No Dots, Linear) ───── */}
       <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 4, right: 6, left: -28, bottom: 0 }}>
+          <AreaChart data={facialSignalsHistory} margin={{ top: 4, right: 6, left: -28, bottom: 0 }}>
+            <defs>
+              <linearGradient id="eyeContactGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#00ff88" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#00ff88" stopOpacity={0.0} />
+              </linearGradient>
+              <linearGradient id="blinkRateGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.0} />
+              </linearGradient>
+              <linearGradient id="headStabGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#00d4ff" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#00d4ff" stopOpacity={0.0} />
+              </linearGradient>
+              <linearGradient id="tensionGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.0} />
+              </linearGradient>
+            </defs>
+
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(30, 41, 59, 0.4)" />
             <XAxis dataKey="time" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
             <YAxis
@@ -85,9 +91,11 @@ export const FacialSignalsCard: React.FC = () => {
               fontSize={8}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(v) => v.toFixed(1)}
+              tickFormatter={(v) => v.toFixed(2)}
             />
             <Tooltip
+              formatter={(value: any, name: any) => [`${Number(value).toFixed(2)}`, name]}
+              labelFormatter={(label) => `Time: ${label}`}
               contentStyle={{ background: '#091522', border: '1px solid rgba(0, 212, 255, 0.4)', borderRadius: 6, fontSize: 9 }}
             />
             <ReferenceLine
@@ -95,13 +103,13 @@ export const FacialSignalsCard: React.FC = () => {
               stroke="rgba(255, 255, 255, 0.6)"
               strokeDasharray="3 3"
               strokeWidth={1}
-              label={{ value: 'Threshold (0.5)', position: 'insideBottomRight', fill: '#64748b', fontSize: 7.5 }}
+              label={{ value: 'Threshold (0.50)', position: 'insideBottomRight', fill: '#64748b', fontSize: 7.5 }}
             />
-            <Line type="monotone" dataKey="eyeContact" stroke="#00ff88" strokeWidth={1.5} dot={false} />
-            <Line type="monotone" dataKey="blinkRate" stroke="#f59e0b" strokeWidth={1.5} dot={false} />
-            <Line type="monotone" dataKey="headStability" stroke="#00d4ff" strokeWidth={1.5} dot={false} />
-            <Line type="monotone" dataKey="facialTension" stroke="#8b5cf6" strokeWidth={1.5} dot={false} />
-          </LineChart>
+            <Area type="linear" dataKey="eyeContact" stroke="#00ff88" strokeWidth={1.5} fill="url(#eyeContactGrad)" dot={false} isAnimationActive={false} />
+            <Area type="linear" dataKey="blinkRate" stroke="#f59e0b" strokeWidth={1.5} fill="url(#blinkRateGrad)" dot={false} isAnimationActive={false} />
+            <Area type="linear" dataKey="headStability" stroke="#00d4ff" strokeWidth={1.5} fill="url(#headStabGrad)" dot={false} isAnimationActive={false} />
+            <Area type="linear" dataKey="facialTension" stroke="#8b5cf6" strokeWidth={1.5} fill="url(#tensionGrad)" dot={false} isAnimationActive={false} />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>

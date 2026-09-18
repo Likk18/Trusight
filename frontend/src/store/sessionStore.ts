@@ -11,9 +11,12 @@ import type {
   MultiModelPoint,
   HeatmapCell,
   VoiceFeaturePoint,
+  FacialSignalPoint,
+  VocalSignalPoint,
+  LinguisticSignalPoint,
 } from '../types';
 
-const MAX_HISTORY = 150; // ~2.5 minutes at 1Hz
+const MAX_HISTORY = 60; // 60 10-second segments = 10 minutes
 
 interface SessionStore {
   // Session state machine
@@ -22,7 +25,10 @@ interface SessionStore {
   sessionStartTime: number | null;
   elapsedSeconds: number;
 
-  // Latest analysis data
+  // 10-Second Tumbling Window Clock State
+  segmentElapsed: number; // 0 to 10
+
+  // Latest analysis data (Evaluated and latched on 10s Tumbling Windows)
   face: FaceAnalysisData | null;
   annotatedFaceFrame: string | null;
   voice: VoiceAnalysisResponse | null;
@@ -38,8 +44,11 @@ interface SessionStore {
   // WebSocket
   wsConnected: boolean;
 
-  // Historical data for charts
+  // Historical data for charts (Updated every 10s at segment boundaries, starting empty)
   truthScoreHistory: TimeSeriesPoint[];
+  facialSignalsHistory: FacialSignalPoint[];
+  vocalSignalsHistory: VocalSignalPoint[];
+  linguisticSignalsHistory: LinguisticSignalPoint[];
   modelScoreHistory: MultiModelPoint[];
   heatmapHistory: HeatmapCell[];
 
@@ -74,11 +83,12 @@ function formatChartTime(seconds: number): string {
 
 export const useSessionStore = create<SessionStore>()(
   subscribeWithSelector((set, get) => ({
-    // Initial state
+    // Initial state (Empty charts on start)
     sessionState: 'Idle',
     sessionId: '',
     sessionStartTime: null,
     elapsedSeconds: 0,
+    segmentElapsed: 0,
     face: null,
     annotatedFaceFrame: null,
     voice: null,
@@ -90,6 +100,9 @@ export const useSessionStore = create<SessionStore>()(
     selectedVoiceSegmentIndex: null,
     wsConnected: false,
     truthScoreHistory: [],
+    facialSignalsHistory: [],
+    vocalSignalsHistory: [],
+    linguisticSignalsHistory: [],
     modelScoreHistory: [],
     heatmapHistory: [],
     cameraActive: false,
@@ -103,9 +116,13 @@ export const useSessionStore = create<SessionStore>()(
         sessionId: id,
         sessionStartTime: Date.now(),
         elapsedSeconds: 0,
+        segmentElapsed: 0,
         selectedVoiceSegmentIndex: null,
         voiceFeatureHistory: [],
         truthScoreHistory: [],
+        facialSignalsHistory: [],
+        vocalSignalsHistory: [],
+        linguisticSignalsHistory: [],
         modelScoreHistory: [],
         heatmapHistory: [],
       });
@@ -124,6 +141,7 @@ export const useSessionStore = create<SessionStore>()(
         sessionId: '',
         sessionStartTime: null,
         elapsedSeconds: 0,
+        segmentElapsed: 0,
         face: null,
         annotatedFaceFrame: null,
         voice: null,
@@ -134,6 +152,9 @@ export const useSessionStore = create<SessionStore>()(
         voiceFeatureHistory: [],
         selectedVoiceSegmentIndex: null,
         truthScoreHistory: [],
+        facialSignalsHistory: [],
+        vocalSignalsHistory: [],
+        linguisticSignalsHistory: [],
         modelScoreHistory: [],
         heatmapHistory: [],
       }),
@@ -151,14 +172,13 @@ export const useSessionStore = create<SessionStore>()(
         return;
       }
 
-      // Generate a representative sequence of feature points for the uploaded file
       const voiceTruth = 100 - result.deception_score;
       const hesLevel = result.metrics.hesitation_level === 'High' ? 80 : result.metrics.hesitation_level === 'Medium' ? 45 : 18;
       const energy = result.metrics.energy_pct;
       const pitchStab = result.metrics.pitch_status === 'Normal' ? 88 : result.metrics.pitch_status === 'High' ? 45 : 60;
 
       const uploadFeaturePoints: VoiceFeaturePoint[] = Array.from({ length: 12 }, (_, i) => ({
-        timestamp: `00:${String(i * 2).padStart(2, '0')}`,
+        timestamp: `00:${String(i * 10).padStart(2, '0')}`,
         truth: Math.round(Math.min(100, Math.max(0, voiceTruth + Math.sin(i * 0.6) * 4))),
         hesitation: Math.round(Math.min(100, Math.max(0, hesLevel + Math.cos(i * 0.7) * 6))),
         energy: Math.round(Math.min(100, Math.max(0, energy + Math.sin(i * 0.5 + 1) * 5))),
@@ -190,64 +210,133 @@ export const useSessionStore = create<SessionStore>()(
     tickTimer: () => {
       const { sessionState, elapsedSeconds } = get();
       if (sessionState === 'Live_Recording') {
-        set({ elapsedSeconds: elapsedSeconds + 1 });
+        const nextSec = elapsedSeconds + 1;
+        set({
+          elapsedSeconds: nextSec,
+          segmentElapsed: nextSec % 10 === 0 ? 10 : nextSec % 10,
+        });
       }
     },
 
-    // ── Telemetry ingestion (1Hz) ────────────────────────────────────────────
+    // ── Telemetry ingestion (Evaluated every 10s at segment boundaries) ─────
     ingestTelemetry: (frame: TelemetryFrame) => {
-      const { sessionState, elapsedSeconds, truthScoreHistory, modelScoreHistory, heatmapHistory, voiceHistory, voiceFeatureHistory, uploadedVoice, selectedVoiceSegmentIndex } = get();
+      const {
+        sessionState,
+        elapsedSeconds,
+        truthScoreHistory,
+        facialSignalsHistory,
+        vocalSignalsHistory,
+        linguisticSignalsHistory,
+        modelScoreHistory,
+        heatmapHistory,
+        voiceHistory,
+        voiceFeatureHistory,
+        uploadedVoice,
+        selectedVoiceSegmentIndex,
+      } = get();
       if (sessionState !== 'Live_Recording') return;
 
       const timeLabel = formatChartTime(elapsedSeconds);
       const fusionScore = frame.fusion.truth_likelihood_pct;
       const voiceScore = 100 - frame.voice.deception_score;
 
-      // Compute acoustic hesitation index & pitch stability for the time-series chart
-      const hesBase = frame.voice.metrics.hesitation_level === 'High' ? 75 : frame.voice.metrics.hesitation_level === 'Medium' ? 45 : 15;
-      const hesScore = Math.min(95, Math.max(5, hesBase + (frame.voice.metrics.pauses_count * 3)));
-      const pitchStab = frame.voice.metrics.pitch_status === 'Normal' ? 88 : frame.voice.metrics.pitch_status === 'High' ? 40 : 58;
+      const segElapsed = frame.segment_info?.segment_elapsed_sec ?? (elapsedSeconds % 10 || 10);
+      const isBoundary = elapsedSeconds === 0 || elapsedSeconds % 10 === 0 || frame.segment_info?.is_boundary;
 
-      const newVoiceFeaturePoint: VoiceFeaturePoint = {
-        timestamp: timeLabel,
-        truth: Math.round(voiceScore),
-        hesitation: Math.round(hesScore),
-        energy: Math.round(frame.voice.metrics.energy_pct),
-        pitchStability: Math.round(pitchStab),
-      };
+      let updatedTruthHistory = truthScoreHistory;
+      let updatedFacialHistory = facialSignalsHistory;
+      let updatedVocalHistory = vocalSignalsHistory;
+      let updatedLinguisticHistory = linguisticSignalsHistory;
+      let updatedModelHistory = modelScoreHistory;
+      let updatedHeatmapHistory = heatmapHistory;
+      let updatedVoiceFeatureHistory = voiceFeatureHistory;
 
-      // Accumulate voice history without dropping past segments (max 60)
+      // Update charts and histories ONLY every 10 seconds
+      if (isBoundary) {
+        const activeVoiceData = uploadedVoice || frame.voice;
+        const vMetrics = activeVoiceData.metrics;
+
+        const pitchVal = vMetrics.pitch_status === 'High' ? 0.46 : vMetrics.pitch_status === 'Low' ? 0.62 : Math.min(1, Math.max(0.2, (100 - (vMetrics.jitter_pct || 0.85) * 15) / 100));
+        const hesitationVal = vMetrics.hesitation_level === 'High' ? 0.78 : vMetrics.hesitation_level === 'Medium' ? 0.46 : Math.min(1, Math.max(0.12, (vMetrics.pauses_count * 0.07 + (vMetrics.shimmer_pct || 2.1) * 0.04)));
+        const energyVal = Number((vMetrics.energy_pct / 100).toFixed(2));
+        const speechRateVal = Number(Math.min(1, Math.max(0.2, vMetrics.speech_rate_wpm / 180)).toFixed(2));
+
+        const newVocal: VocalSignalPoint = {
+          time: timeLabel,
+          pitch: Number(pitchVal.toFixed(2)),
+          hesitation: Number(hesitationVal.toFixed(2)),
+          energy: energyVal,
+          speechRate: speechRateVal,
+        };
+
+        const newVoiceFeaturePoint: VoiceFeaturePoint = {
+          timestamp: timeLabel,
+          truth: Math.round(voiceScore),
+          hesitation: Math.round(hesitationVal * 100),
+          energy: Math.round(vMetrics.energy_pct),
+          pitchStability: Math.round(pitchVal * 100),
+        };
+
+        const newTruth: TimeSeriesPoint = { timestamp: timeLabel, value: fusionScore };
+        const newFacial: FacialSignalPoint = {
+          time: timeLabel,
+          eyeContact: Number((frame.face.metrics.eye_contact_pct / 100).toFixed(2)),
+          blinkRate: Number((frame.face.metrics.blink_rate_status === 'Normal' ? 0.45 : 0.75).toFixed(2)),
+          headStability: Number((frame.face.metrics.head_stability_pct / 100).toFixed(2)),
+          facialTension: Number((frame.face.metrics.facial_tension_pct / 100).toFixed(2)),
+        };
+
+        const newLinguistic: LinguisticSignalPoint = {
+          time: timeLabel,
+          consistency: Number((frame.text.text_score / 100).toFixed(2)),
+          factMatch: Number((frame.text.confidence / 100).toFixed(2)),
+          contradictions: 0.12,
+          uncertainty: 0.18,
+        };
+        const newModel: MultiModelPoint = {
+          timestamp: timeLabel,
+          face: frame.face.face_score,
+          voice: voiceScore,
+          text: frame.text.text_score,
+          evidence: frame.fusion.model_agreement.evidence_score,
+        };
+        const newHeat: HeatmapCell = {
+          timestamp: timeLabel,
+          score: fusionScore,
+          label: fusionScore >= 70 ? 'High Truth' : fusionScore >= 45 ? 'Moderate' : 'Low Truth',
+        };
+
+        // Ensure we don't append duplicate points for the exact same 10s timestamp
+        const lastPoint = truthScoreHistory[truthScoreHistory.length - 1];
+        if (!lastPoint || lastPoint.timestamp !== timeLabel) {
+          updatedTruthHistory = [...truthScoreHistory, newTruth].slice(-MAX_HISTORY);
+          updatedFacialHistory = [...facialSignalsHistory, newFacial].slice(-MAX_HISTORY);
+          updatedVocalHistory = [...vocalSignalsHistory, newVocal].slice(-MAX_HISTORY);
+          updatedLinguisticHistory = [...linguisticSignalsHistory, newLinguistic].slice(-MAX_HISTORY);
+          updatedModelHistory = [...modelScoreHistory, newModel].slice(-MAX_HISTORY);
+          updatedHeatmapHistory = [...heatmapHistory, newHeat].slice(-MAX_HISTORY);
+          updatedVoiceFeatureHistory = [...voiceFeatureHistory, newVoiceFeaturePoint].slice(-MAX_HISTORY);
+        }
+      }
+
+      // Accumulate voice history
       const updatedVoiceHistory = [...voiceHistory, frame.voice].slice(-60);
-      const updatedVoiceFeatureHistory = [...voiceFeatureHistory, newVoiceFeaturePoint].slice(-MAX_HISTORY);
-
-      // Determine active voice displayed: if inspecting a segment, keep it; if uploaded file pinned, keep it; else update to live
       const activeVoice = uploadedVoice ?? (selectedVoiceSegmentIndex !== null && voiceHistory[selectedVoiceSegmentIndex] ? voiceHistory[selectedVoiceSegmentIndex] : frame.voice);
 
-      // Append to time-series (bounded to MAX_HISTORY)
-      const newTruth: TimeSeriesPoint = { timestamp: timeLabel, value: fusionScore };
-      const newModel: MultiModelPoint = {
-        timestamp: timeLabel,
-        face: frame.face.face_score,
-        voice: voiceScore,
-        text: frame.text.text_score,
-        evidence: frame.fusion.model_agreement.evidence_score,
-      };
-      const newHeat: HeatmapCell = {
-        timestamp: timeLabel,
-        score: fusionScore,
-        label: fusionScore >= 70 ? 'High Truth' : fusionScore >= 45 ? 'Moderate' : 'Low Truth',
-      };
-
       set({
+        segmentElapsed: segElapsed,
         face: frame.face,
         voice: activeVoice,
         text: frame.text,
         fusion: frame.fusion,
         voiceHistory: updatedVoiceHistory,
         voiceFeatureHistory: updatedVoiceFeatureHistory,
-        truthScoreHistory: [...truthScoreHistory, newTruth].slice(-MAX_HISTORY),
-        modelScoreHistory: [...modelScoreHistory, newModel].slice(-MAX_HISTORY),
-        heatmapHistory: [...heatmapHistory, newHeat].slice(-MAX_HISTORY),
+        truthScoreHistory: updatedTruthHistory,
+        facialSignalsHistory: updatedFacialHistory,
+        vocalSignalsHistory: updatedVocalHistory,
+        linguisticSignalsHistory: updatedLinguisticHistory,
+        modelScoreHistory: updatedModelHistory,
+        heatmapHistory: updatedHeatmapHistory,
       });
     },
   }))

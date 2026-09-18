@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useSessionStore } from '../store/sessionStore';
 
 interface UseAudioAnalyserResult {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   audioLevel: number; // 0 - 100
   equalizerBars: [number, number, number, number]; // pixel heights 2 - 12px
+  startMic: () => Promise<boolean>;
+  stopMic: () => void;
   connectStream: (stream: MediaStream) => void;
   disconnect: () => void;
 }
@@ -14,6 +17,8 @@ export function useAudioAnalyser(fftSize = 256): UseAudioAnalyserResult {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const setMicActive = useSessionStore((s) => s.setMicActive);
 
   const [audioLevel, setAudioLevel] = useState(0);
   const [equalizerBars, setEqualizerBars] = useState<[number, number, number, number]>([3, 4, 2, 3]);
@@ -34,6 +39,15 @@ export function useAudioAnalyser(fftSize = 256): UseAudioAnalyserResult {
     setAudioLevel(0);
     setEqualizerBars([3, 4, 2, 3]);
   }, []);
+
+  const stopMic = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    disconnect();
+    setMicActive(false);
+  }, [disconnect, setMicActive]);
 
   const connectStream = useCallback(
     (stream: MediaStream) => {
@@ -63,7 +77,6 @@ export function useAudioAnalyser(fftSize = 256): UseAudioAnalyserResult {
           analyser.getByteFrequencyData(freqData);
           analyser.getByteTimeDomainData(timeData);
 
-          // Calculate average volume level (0 - 100)
           let sum = 0;
           for (let i = 0; i < bufferLength; i++) {
             sum += freqData[i];
@@ -71,8 +84,6 @@ export function useAudioAnalyser(fftSize = 256): UseAudioAnalyserResult {
           const avg = sum / bufferLength;
           setAudioLevel(Math.min(100, Math.round((avg / 255) * 100 * 1.5)));
 
-          // Calculate 4 distinct frequency bands for the mini equalizer
-          // Band 1: Low (0 - 15%), Band 2: Mid-Low (15 - 35%), Band 3: Mid-High (35 - 65%), Band 4: High (65 - 100%)
           const b1End = Math.floor(bufferLength * 0.15);
           const b2End = Math.floor(bufferLength * 0.35);
           const b3End = Math.floor(bufferLength * 0.65);
@@ -89,7 +100,6 @@ export function useAudioAnalyser(fftSize = 256): UseAudioAnalyserResult {
           const v3 = getBandAvg(b2End, b3End) / 255;
           const v4 = getBandAvg(b3End, bufferLength) / 255;
 
-          // Map to pixel heights (minimum 2px, maximum 12px)
           const h1 = Math.max(2, Math.min(12, Math.round(v1 * 12 + 2)));
           const h2 = Math.max(2, Math.min(12, Math.round(v2 * 14 + 3)));
           const h3 = Math.max(2, Math.min(12, Math.round(v3 * 11 + 2)));
@@ -97,7 +107,6 @@ export function useAudioAnalyser(fftSize = 256): UseAudioAnalyserResult {
 
           setEqualizerBars([h1, h2, h3, h4]);
 
-          // Optional waveform canvas drawing
           const canvas = canvasRef.current;
           if (canvas) {
             const ctx = canvas.getContext('2d');
@@ -142,11 +151,26 @@ export function useAudioAnalyser(fftSize = 256): UseAudioAnalyserResult {
     [disconnect, fftSize]
   );
 
+  const startMic = useCallback(async () => {
+    stopMic();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      connectStream(stream);
+      setMicActive(true);
+      return true;
+    } catch (err) {
+      console.warn('Microphone permission denied or device unavailable:', err);
+      setMicActive(false);
+      return false;
+    }
+  }, [stopMic, connectStream, setMicActive]);
+
   useEffect(() => {
     return () => {
-      disconnect();
+      stopMic();
     };
-  }, [disconnect]);
+  }, [stopMic]);
 
-  return { canvasRef, audioLevel, equalizerBars, connectStream, disconnect };
+  return { canvasRef, audioLevel, equalizerBars, startMic, stopMic, connectStream, disconnect };
 }

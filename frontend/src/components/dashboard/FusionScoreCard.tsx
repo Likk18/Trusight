@@ -39,7 +39,6 @@ export const FusionScoreCard: React.FC = () => {
     >
       {/* ── Full Card Three.js Floating Lines Shader Background ─────── */}
       <FloatingLines
-        key={isTruthful ? 'green-config' : 'red-config'}
         enabledWaves="middle,bottom,top"
         lineCount={8}
         lineDistance={8}

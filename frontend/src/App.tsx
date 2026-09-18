@@ -46,11 +46,11 @@ const App: React.FC = () => {
           overflow: 'hidden',
         }}
       >
-        {/* ── 2. TOP ANALYTICS ROW (Fusion Score 65% | Factors 35%) ────── */}
+        {/* ── 2. TOP ANALYTICS ROW (Full-Width Fusion Score Area Chart) ── */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.85fr 1fr',
+            gridTemplateColumns: '2fr 1fr',
             gap: 6,
             flex: '1.15 1 0',
             minHeight: 0,
@@ -76,7 +76,14 @@ const App: React.FC = () => {
         </div>
 
         {/* ── 4. LIVE TRANSCRIPT STRIP (Full-Width 44px) ───────────────── */}
-        <LiveTranscriptStrip />
+        <div
+          style={{
+            flex: 'none',
+            height: 44,
+          }}
+        >
+          <LiveTranscriptStrip />
+        </div>
 
         {/* ── 5. THREE SIGNAL ANALYTICS CHARTS (33.3% | 33.3% | 33.3%) ─── */}
         <div

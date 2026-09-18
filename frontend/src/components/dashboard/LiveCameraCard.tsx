@@ -3,7 +3,7 @@ import { useSessionStore } from '../../store/sessionStore';
 import { useUserMedia } from '../../hooks/useUserMedia';
 import { useAudioAnalyser } from '../../hooks/useAudioAnalyser';
 import { analyzeFaceFrame } from '../../api/endpoints';
-import { Camera, Mic, Maximize2, CameraOff, MicOff } from 'lucide-react';
+import { Camera, Mic, Maximize2, CameraOff, MicOff, Eye, EyeOff } from 'lucide-react';
 
 export const LiveCameraCard: React.FC = () => {
   const sessionState = useSessionStore((s) => s.sessionState);
@@ -13,54 +13,49 @@ export const LiveCameraCard: React.FC = () => {
   const elapsedSeconds = useSessionStore((s) => s.elapsedSeconds);
   const annotatedFaceFrame = useSessionStore((s) => s.annotatedFaceFrame);
   const setAnnotatedFaceFrame = useSessionStore((s) => s.setAnnotatedFaceFrame);
-  const setFace = useSessionStore((s) => s.setFace);
 
-  const [localCamOn, setLocalCamOn] = useState(false);
+  const [showAnnotations, setShowAnnotations] = useState(true); // Toggle for facial landmark/tracking overlay
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameTimerRef = useRef<number | null>(null);
   const isStreamingRef = useRef(false);
 
   const { videoRef, startCamera, stopCamera } = useUserMedia();
-  const { equalizerBars, connectStream, disconnect: disconnectAudio } = useAudioAnalyser();
+  const { equalizerBars, startMic, stopMic } = useAudioAnalyser();
 
-  const isLive = sessionState === 'Live_Recording' || localCamOn || cameraActive;
-
+  // Independent Camera toggle
   const handleToggleCam = useCallback(() => {
-    if (localCamOn || cameraActive) {
+    if (cameraActive) {
       stopCamera();
-      disconnectAudio();
-      setLocalCamOn(false);
       setAnnotatedFaceFrame(null);
     } else {
-      startCamera().then(() => {
-        setLocalCamOn(true);
-        navigator.mediaDevices
-          ?.getUserMedia({ audio: true })
-          .then(connectStream)
-          .catch(() => {});
-      });
+      startCamera();
     }
-  }, [localCamOn, cameraActive, startCamera, stopCamera, connectStream, disconnectAudio, setAnnotatedFaceFrame]);
+  }, [cameraActive, startCamera, stopCamera, setAnnotatedFaceFrame]);
 
+  // Independent Mic toggle
+  const handleToggleMic = useCallback(() => {
+    if (micActive) {
+      stopMic();
+    } else {
+      startMic();
+    }
+  }, [micActive, startMic, stopMic]);
+
+  // Auto-start hardware on recording start
   useEffect(() => {
     if (sessionState === 'Live_Recording') {
-      startCamera().then(() => {
-        setLocalCamOn(true);
-        navigator.mediaDevices
-          ?.getUserMedia({ audio: true })
-          .then(connectStream)
-          .catch(() => {});
-      });
-    } else if (sessionState === 'Idle' && !localCamOn) {
+      startCamera();
+      startMic();
+    } else if (sessionState === 'Idle') {
       stopCamera();
-      disconnectAudio();
+      stopMic();
       setAnnotatedFaceFrame(null);
     }
-  }, [sessionState, connectStream, disconnectAudio, startCamera, stopCamera, setAnnotatedFaceFrame, localCamOn]);
+  }, [sessionState]);
 
   // Frame streaming loop (~12 FPS)
   useEffect(() => {
-    if (!isLive) {
+    if (!cameraActive) {
       if (frameTimerRef.current) {
         clearInterval(frameTimerRef.current);
         frameTimerRef.current = null;
@@ -89,16 +84,8 @@ export const LiveCameraCard: React.FC = () => {
         const b64 = canvas.toDataURL('image/jpeg', 0.65);
 
         const res = await analyzeFaceFrame(sessionId || 'live_session', b64);
-        if (res.status === 'success') {
-          if (res.annotated_frame) {
-            setAnnotatedFaceFrame(res.annotated_frame);
-          }
-          setFace({
-            face_score: res.face_score,
-            confidence: res.confidence,
-            metrics: res.metrics,
-            key_reasons: res.key_reasons,
-          });
+        if (res.status === 'success' && res.annotated_frame) {
+          setAnnotatedFaceFrame(res.annotated_frame);
         }
       } catch (err) {
         // Continue stream
@@ -115,7 +102,7 @@ export const LiveCameraCard: React.FC = () => {
         frameTimerRef.current = null;
       }
     };
-  }, [isLive, sessionId, setAnnotatedFaceFrame, setFace, videoRef]);
+  }, [cameraActive, sessionId, setAnnotatedFaceFrame, videoRef]);
 
   const formatTimer = (sec: number) => {
     const h = Math.floor(sec / 3600).toString().padStart(2, '0');
@@ -140,7 +127,7 @@ export const LiveCameraCard: React.FC = () => {
         overflow: 'hidden',
       }}
     >
-      {/* ── High-Contrast, Clean Header HUD ──────────────────────────── */}
+      {/* ── High-Contrast Header HUD ─────────────────────────────────── */}
       <div
         style={{
           position: 'absolute',
@@ -163,9 +150,9 @@ export const LiveCameraCard: React.FC = () => {
               width: 7,
               height: 7,
               borderRadius: '50%',
-              background: '#ef4444',
-              boxShadow: '0 0 8px #ef4444',
-              animation: isLive ? 'pulse-dot 1s infinite' : 'none',
+              background: cameraActive ? '#ef4444' : '#64748b',
+              boxShadow: cameraActive ? '0 0 8px #ef4444' : 'none',
+              animation: cameraActive ? 'pulse-dot 1s infinite' : 'none',
               flexShrink: 0,
             }}
           />
@@ -174,7 +161,7 @@ export const LiveCameraCard: React.FC = () => {
               fontFamily: 'Space Grotesk, sans-serif',
               fontSize: 11,
               fontWeight: 800,
-              color: '#F8FAFC',
+              color: cameraActive ? '#F8FAFC' : '#94a3b8',
               letterSpacing: '0.06em',
             }}
           >
@@ -214,8 +201,8 @@ export const LiveCameraCard: React.FC = () => {
           }}
         />
 
-        {/* 1:1 OpenCV Annotated Image Stream */}
-        {annotatedFaceFrame && isLive && (
+        {/* 1:1 OpenCV Annotated Image Stream (478 Landmarks / Mesh / Gaze / Pose / AU Overlay) */}
+        {annotatedFaceFrame && cameraActive && showAnnotations && (
           <img
             src={annotatedFaceFrame}
             alt="Facial Tracking Stream"
@@ -232,7 +219,7 @@ export const LiveCameraCard: React.FC = () => {
         )}
 
         {/* Placeholder if camera off */}
-        {!isLive && (
+        {!cameraActive && (
           <div
             style={{
               position: 'absolute',
@@ -261,13 +248,13 @@ export const LiveCameraCard: React.FC = () => {
                 cursor: 'pointer',
               }}
             >
-              Start Camera & Tracking
+              Start Camera
             </button>
           </div>
         )}
       </div>
 
-      {/* ── Zero-Padding Flush Bottom Strip HUD: Dynamic Equalizer + Active Session Timer ─ */}
+      {/* ── Zero-Padding Flush Bottom Strip HUD ──────────────────────── */}
       <div
         style={{
           position: 'absolute',
@@ -285,48 +272,43 @@ export const LiveCameraCard: React.FC = () => {
           zIndex: 10,
         }}
       >
-        {/* Real-time Voice Audio Equalizer & Session Timer */}
+        {/* Audio Equalizer & Timestamp */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {/* Dynamic 4 Cyan Equalizer Bars (Bouncing with voice audio level) */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 1.5, height: 9 }}>
             <span
               style={{
-                width: 2.5,
-                height: isLive ? `${equalizerBars[0]}px` : '3px',
-                background: '#00d4ff',
+                width: 2,
+                height: micActive ? `${equalizerBars[0]}px` : '3px',
+                background: micActive ? '#00d4ff' : '#475569',
                 borderRadius: 1,
                 transition: 'height 0.08s ease',
-                boxShadow: isLive && equalizerBars[0] > 6 ? '0 0 6px #00d4ff' : 'none',
               }}
             />
             <span
               style={{
-                width: 2.5,
-                height: isLive ? `${equalizerBars[1]}px` : '4px',
-                background: '#00d4ff',
+                width: 2,
+                height: micActive ? `${equalizerBars[1]}px` : '4px',
+                background: micActive ? '#00d4ff' : '#475569',
                 borderRadius: 1,
                 transition: 'height 0.08s ease',
-                boxShadow: isLive && equalizerBars[1] > 6 ? '0 0 6px #00d4ff' : 'none',
               }}
             />
             <span
               style={{
-                width: 2.5,
-                height: isLive ? `${equalizerBars[2]}px` : '2px',
-                background: '#00d4ff',
+                width: 2,
+                height: micActive ? `${equalizerBars[2]}px` : '2px',
+                background: micActive ? '#00d4ff' : '#475569',
                 borderRadius: 1,
                 transition: 'height 0.08s ease',
-                boxShadow: isLive && equalizerBars[2] > 6 ? '0 0 6px #00d4ff' : 'none',
               }}
             />
             <span
               style={{
-                width: 2.5,
-                height: isLive ? `${equalizerBars[3]}px` : '3px',
-                background: '#00d4ff',
+                width: 2,
+                height: micActive ? `${equalizerBars[3]}px` : '3px',
+                background: micActive ? '#00d4ff' : '#475569',
                 borderRadius: 1,
                 transition: 'height 0.08s ease',
-                boxShadow: isLive && equalizerBars[3] > 6 ? '0 0 6px #00d4ff' : 'none',
               }}
             />
           </div>
@@ -343,24 +325,71 @@ export const LiveCameraCard: React.FC = () => {
           </span>
         </div>
 
-        {/* Action Icons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        {/* Action Controls: Eye (Face Annotation Overlay Toggle), Camera, Microphone, Fullscreen */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Eye Face Annotation Overlay Toggle Button */}
+          <button
+            onClick={() => setShowAnnotations(!showAnnotations)}
+            title={showAnnotations ? 'Hide face tracking annotations' : 'Show face tracking annotations'}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: showAnnotations ? '#00d4ff' : '#64748b',
+              padding: 1,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            {showAnnotations ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+
+          {/* Camera Toggle Button */}
           <button
             onClick={handleToggleCam}
-            title={isLive ? 'Turn off camera' : 'Turn on camera'}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: isLive ? '#00ff88' : '#64748b', padding: 1 }}
+            title={cameraActive ? 'Turn off camera' : 'Turn on camera'}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: cameraActive ? '#00ff88' : '#ef4444',
+              padding: 1,
+              display: 'flex',
+              alignItems: 'center',
+            }}
           >
-            {isLive ? <Camera size={11} /> : <CameraOff size={11} />}
+            {cameraActive ? <Camera size={11} /> : <CameraOff size={11} />}
           </button>
+
+          {/* Microphone Toggle Button */}
           <button
-            title={micActive ? 'Microphone active' : 'Microphone off'}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: micActive ? '#00ff88' : '#64748b', padding: 1 }}
+            onClick={handleToggleMic}
+            title={micActive ? 'Mute microphone' : 'Unmute microphone'}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: micActive ? '#00ff88' : '#ef4444',
+              padding: 1,
+              display: 'flex',
+              alignItems: 'center',
+            }}
           >
             {micActive ? <Mic size={11} /> : <MicOff size={11} />}
           </button>
+
+          {/* Fullscreen Button */}
           <button
             title="Fullscreen view"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 1 }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#64748b',
+              padding: 1,
+              display: 'flex',
+              alignItems: 'center',
+            }}
           >
             <Maximize2 size={10} />
           </button>

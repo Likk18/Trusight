@@ -111,10 +111,18 @@ export interface FusionResponse {
 // ──────────────────────────────────────────────────────
 // WebSocket Telemetry Frame (1Hz)
 // ──────────────────────────────────────────────────────
+export interface SegmentInfo {
+  segment_index: number;
+  segment_elapsed_sec: number;
+  window_duration_sec: number;
+  is_boundary: boolean;
+}
+
 export interface TelemetryFrame {
   tick: number;
   timestamp: string;
   session_active: boolean;
+  segment_info?: SegmentInfo;
   face: FaceAnalysisResponse['data'];
   voice: VoiceAnalysisResponse;
   text: TextAnalysisResponse;
@@ -160,4 +168,28 @@ export interface VoiceFeaturePoint {
   hesitation: number;
   energy: number;
   pitchStability: number;
+}
+
+export interface FacialSignalPoint {
+  time: string;
+  eyeContact: number;
+  blinkRate: number;
+  headStability: number;
+  facialTension: number;
+}
+
+export interface VocalSignalPoint {
+  time: string;
+  pitch: number;
+  hesitation: number;
+  energy: number;
+  speechRate: number;
+}
+
+export interface LinguisticSignalPoint {
+  time: string;
+  consistency: number;
+  factMatch: number;
+  contradictions: number;
+  uncertainty: number;
 }
