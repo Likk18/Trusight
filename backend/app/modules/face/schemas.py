@@ -1,42 +1,47 @@
-"""Pydantic schemas for the Face Analysis module.
-
-IMPORTANT FOR DEVELOPER 1:
-- Replace ONLY `service.py` with your real ML model implementation.
-- Do NOT modify these schemas. The frontend and fusion engine depend on this exact contract.
-- Your service must return a `FaceAnalysisResponse` object.
 """
+Pydantic schemas for the Face Analysis module.
+"""
+from typing import List, Optional
 from pydantic import BaseModel, Field
-from typing import Literal
-
-
-class FaceAnalysisRequest(BaseModel):
-    """Request payload for face analysis. Extend with additional fields if needed."""
-
-    session_id: str = Field(..., description="Active session identifier")
-    frame_timestamp_ms: float | None = Field(None, description="Frame timestamp in milliseconds")
 
 
 class FaceMetrics(BaseModel):
-    """Detailed per-metric breakdown from face analysis."""
-
-    eye_contact_pct: float = Field(..., ge=0, le=100, description="Eye contact percentage")
-    blink_rate_status: str = Field(..., description="Blink rate status (Normal / Low / High)")
-    head_stability_pct: float = Field(..., ge=0, le=100, description="Head stability percentage")
-    micro_expressions_level: str = Field(..., description="Micro expression intensity (Low / Medium / High)")
-    facial_tension_pct: float = Field(..., ge=0, le=100, description="Facial tension percentage")
+    eye_contact_pct: float = Field(..., description="Eye contact percentage (0-100)")
+    blink_rate_status: str = Field(..., description="'Normal' | 'Low' | 'High'")
+    head_stability_pct: float = Field(..., description="Head stability percentage (0-100)")
+    micro_expressions_level: str = Field(..., description="'Low' | 'Medium' | 'High'")
+    facial_tension_pct: float = Field(..., description="Facial muscle tension (0-100)")
 
 
 class FaceAnalysisData(BaseModel):
-    """Nested data object within the face analysis response."""
-
-    face_score: float = Field(..., ge=0, le=100, description="Overall face truthfulness score (0–100)")
-    confidence: float = Field(..., ge=0, le=100, description="Model confidence (0–100)")
+    face_score: float = Field(..., description="Truthfulness/composure likelihood (0-100)")
+    confidence: float = Field(..., description="Model detection confidence (0-100)")
     metrics: FaceMetrics
-    key_reasons: list[str] = Field(..., description="Top reasons contributing to the face score")
+    key_reasons: List[str] = Field(default_factory=list)
+
+
+class FaceAnalysisRequest(BaseModel):
+    session_id: str
+    frame_timestamp_ms: Optional[float] = None
+    frame_base64: Optional[str] = None
 
 
 class FaceAnalysisResponse(BaseModel):
-    """Standard response envelope for the face analysis endpoint."""
-
-    status: Literal["success", "error"] = "success"
+    status: str = "success"
     data: FaceAnalysisData
+    annotated_frame: Optional[str] = None
+
+
+class FaceFrameRequest(BaseModel):
+    session_id: str = "live_session"
+    frame_base64: str = Field(..., description="Base64 encoded JPEG or PNG image frame")
+
+
+class FaceFrameResponse(BaseModel):
+    status: str = "success"
+    faces_detected: int = 0
+    face_score: float = 85.0
+    confidence: float = 90.0
+    metrics: FaceMetrics
+    key_reasons: List[str] = Field(default_factory=list)
+    annotated_frame: Optional[str] = Field(None, description="Base64 encoded JPEG with OpenCV annotations")

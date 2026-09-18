@@ -1,34 +1,94 @@
+# Dependencies & Environments
 node_modules/
+.pnpm-store/
 .venv/
 .venv*/
 venv/
 env/
-__pycache__/
-*.pyc
-*.pyo
-.env
+ENV/
 dist/
 build/
+.next/
+.vite/
+
+# Python Bytecode & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Operating System & IDE Files
 .DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs & Temporary Files
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+tmp/
+temp/
+*.tmp
 
-# Storage & generated reports
+# Storage, Database & Reports
 storage/
 backend/storage/
+*.db
+*.sqlite
+*.sqlite3
 *.pdf
+output/
+backend/output/
+backend/app/modules/face/output/
+backend/app/modules/real_face_module/output/
 
-# Superpowers temporary assets
-.superpowers/
+# Large Datasets & Archives (>100MB)
 *_dataset/
 *_dataset_raw/
+dolos_dataset/
+reallife_dataset_raw/
+extra_dataset_raw/
 *.zip
+*.tar
 *.tar.gz
 *.tar.bz2
 *.7z
+*.rar
 backend/app/modules/voice/dolos_dataset/
 backend/app/modules/voice/extra_dataset_raw/
 backend/app/modules/voice/reallife_dataset_raw/
 backend/app/modules/voice/extra_dataset.zip
 backend/app/modules/voice/reallife_dataset.zip
+backend/app/modules/voice_service/
+backend/app/modules/face_backup/
 
+# Heavy Raw Media Files (preserve small sample audio)
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.wav
+!backend/app/modules/voice/sample_audio/*.wav
+
+# Agent Harness & Local Sessions
+.superpowers/
+.opencode/
+.opencode.json

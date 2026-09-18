@@ -16,8 +16,8 @@ export function useUserMedia(): UseUserMediaResult {
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: true,
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+        audio: false,
       });
       streamRef.current = stream;
 
@@ -27,11 +27,18 @@ export function useUserMedia(): UseUserMediaResult {
       }
 
       const hasVideo = stream.getVideoTracks().length > 0;
-      const hasAudio = stream.getAudioTracks().length > 0;
       setCameraActive(hasVideo);
-      setMicActive(hasAudio);
+
+      // Attempt optional audio stream for microphone without blocking video
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const hasAudio = audioStream.getAudioTracks().length > 0;
+        setMicActive(hasAudio);
+      } catch {
+        setMicActive(false);
+      }
     } catch (err) {
-      console.warn('[useUserMedia] Permission denied or device unavailable:', err);
+      console.warn('[useUserMedia] Video permission denied or device unavailable:', err);
       setCameraActive(false);
       setMicActive(false);
     }

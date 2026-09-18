@@ -24,6 +24,7 @@ interface SessionStore {
 
   // Latest analysis data
   face: FaceAnalysisData | null;
+  annotatedFaceFrame: string | null;
   voice: VoiceAnalysisResponse | null;
   text: TextAnalysisResponse | null;
   fusion: FusionResponse | null;
@@ -56,6 +57,8 @@ interface SessionStore {
   setWsConnected: (connected: boolean) => void;
   setCameraActive: (active: boolean) => void;
   setMicActive: (active: boolean) => void;
+  setAnnotatedFaceFrame: (frame: string | null) => void;
+  setFace: (faceData: FaceAnalysisData) => void;
   setUploadedVoice: (result: VoiceAnalysisResponse | null) => void;
   selectVoiceSegment: (index: number | null) => void;
   clearUploadedVoice: () => void;
@@ -77,6 +80,7 @@ export const useSessionStore = create<SessionStore>()(
     sessionStartTime: null,
     elapsedSeconds: 0,
     face: null,
+    annotatedFaceFrame: null,
     voice: null,
     text: null,
     fusion: null,
@@ -121,6 +125,7 @@ export const useSessionStore = create<SessionStore>()(
         sessionStartTime: null,
         elapsedSeconds: 0,
         face: null,
+        annotatedFaceFrame: null,
         voice: null,
         text: null,
         fusion: null,
@@ -137,6 +142,8 @@ export const useSessionStore = create<SessionStore>()(
     setWsConnected: (connected) => set({ wsConnected: connected }),
     setCameraActive: (active) => set({ cameraActive: active }),
     setMicActive: (active) => set({ micActive: active }),
+    setAnnotatedFaceFrame: (frame) => set({ annotatedFaceFrame: frame }),
+    setFace: (faceData) => set({ face: faceData }),
 
     setUploadedVoice: (result) => {
       if (!result) {
