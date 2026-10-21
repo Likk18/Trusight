@@ -16,6 +16,7 @@ export interface ExportReportPayload {
   voice_data?: VoiceAnalysisResponse | null;
   text_data?: TextAnalysisResponse | null;
   fusion_data?: FusionResponse | null;
+  case_data?: any | null;
 }
 
 // ── Face ──────────────────────────────────────────────
@@ -146,3 +147,44 @@ export const checkHealth = async () => {
   const { data } = await apiClient.get('/api/v1/health');
   return data;
 };
+
+// ── Case Evidence & NLI Verification ──────────────────
+export const uploadCaseReport = async (file: File): Promise<{
+  status: string;
+  case_id: string;
+  filename: string;
+  pages: number;
+  chunks: number;
+  message: string;
+}> => {
+  const formData = new FormData();
+  formData.append('pdf', file);
+  const { data } = await apiClient.post('/api/v1/case/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 180000,
+  });
+  return data;
+};
+
+export const getCaseReport = async (caseId: string) => {
+  const { data } = await apiClient.get(`/api/v1/case/${caseId}`);
+  return data;
+};
+
+export const analyzeCaseStatement = async (
+  caseId: string,
+  statement: string
+) => {
+  const { data } = await apiClient.post(`/api/v1/case/${caseId}/analyze-statement`, {
+    statement,
+  }, {
+    timeout: 180000,
+  });
+  return data;
+};
+
+export const checkOllamaStatus = async () => {
+  const { data } = await apiClient.get('/api/v1/case/ollama/status');
+  return data;
+};
+

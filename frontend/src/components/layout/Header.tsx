@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useSessionStore } from '../../store/sessionStore';
 import { exportReport } from '../../api/endpoints';
-import { Download, Pause, Play, Square, RotateCcw } from 'lucide-react';
+import { CaseAnalysisModal } from '../case/CaseAnalysisModal';
+import { FileText, Download, Pause, Play, Square, RotateCcw } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const {
@@ -13,6 +14,8 @@ export const Header: React.FC = () => {
     uploadedVoice,
     text,
     fusion,
+    activeCase,
+    caseAnalysis,
     startSession,
     pauseSession,
     resumeSession,
@@ -21,6 +24,7 @@ export const Header: React.FC = () => {
   } = useSessionStore();
 
   const [exporting, setExporting] = useState(false);
+  const [caseModalOpen, setCaseModalOpen] = useState(false);
 
   const isLive = sessionState === 'Live_Recording';
   const isPaused = sessionState === 'Paused';
@@ -50,6 +54,7 @@ export const Header: React.FC = () => {
         voice_data: activeVoice,
         text_data: text,
         fusion_data: fusion,
+        case_data: caseAnalysis,
       });
       window.open(`http://localhost:8000${result.download_url}`, '_blank');
     } catch {
@@ -265,6 +270,43 @@ export const Header: React.FC = () => {
           </>
         )}
 
+        {/* Case Report & Evidence Button */}
+        <button
+          onClick={() => setCaseModalOpen(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            background: activeCase ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 212, 255, 0.12)',
+            color: activeCase ? '#10b981' : '#00d4ff',
+            border: `1px solid ${activeCase ? 'rgba(16, 185, 129, 0.4)' : 'rgba(0, 212, 255, 0.35)'}`,
+            borderRadius: 6,
+            padding: '5px 12px',
+            fontSize: 11,
+            fontWeight: 700,
+            fontFamily: 'Space Grotesk, sans-serif',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <FileText size={12} />
+          <span>{activeCase ? `Case: ${activeCase.filename.slice(0, 16)}` : 'Case Evidence PDF'}</span>
+          {activeCase && (
+            <span
+              style={{
+                fontSize: 9,
+                background: '#10b981',
+                color: '#01121f',
+                padding: '1px 5px',
+                borderRadius: 3,
+                fontWeight: 900,
+              }}
+            >
+              READY
+            </span>
+          )}
+        </button>
+
         {/* Export PDF Button */}
         <button
           onClick={handleExport}
@@ -290,6 +332,10 @@ export const Header: React.FC = () => {
           <span>{exporting ? 'Exporting...' : 'Export PDF ›'}</span>
         </button>
       </div>
+
+      {/* Case Analysis Modal */}
+      <CaseAnalysisModal isOpen={caseModalOpen} onClose={() => setCaseModalOpen(false)} />
     </header>
   );
 };
+

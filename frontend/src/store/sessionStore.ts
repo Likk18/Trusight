@@ -41,6 +41,11 @@ interface SessionStore {
   voiceFeatureHistory: VoiceFeaturePoint[];
   selectedVoiceSegmentIndex: number | null;
 
+  // Case Report & Evidence State
+  activeCase: import('../types').CaseReportData | null;
+  caseAnalysis: import('../types').CaseAnalysisResult | null;
+  isRecordingInterview: boolean;
+
   // WebSocket
   wsConnected: boolean;
 
@@ -71,8 +76,12 @@ interface SessionStore {
   setUploadedVoice: (result: VoiceAnalysisResponse | null) => void;
   selectVoiceSegment: (index: number | null) => void;
   clearUploadedVoice: () => void;
+  setActiveCase: (caseData: import('../types').CaseReportData | null) => void;
+  setCaseAnalysis: (res: import('../types').CaseAnalysisResult | null) => void;
+  setIsRecordingInterview: (recording: boolean) => void;
   ingestTelemetry: (frame: TelemetryFrame) => void;
   tickTimer: () => void;
+
 }
 
 function formatChartTime(seconds: number): string {
@@ -98,6 +107,9 @@ export const useSessionStore = create<SessionStore>()(
     voiceHistory: [],
     voiceFeatureHistory: [],
     selectedVoiceSegmentIndex: null,
+    activeCase: null,
+    caseAnalysis: null,
+    isRecordingInterview: false,
     wsConnected: false,
     truthScoreHistory: [],
     facialSignalsHistory: [],
@@ -151,6 +163,8 @@ export const useSessionStore = create<SessionStore>()(
         voiceHistory: [],
         voiceFeatureHistory: [],
         selectedVoiceSegmentIndex: null,
+        caseAnalysis: null,
+        isRecordingInterview: false,
         truthScoreHistory: [],
         facialSignalsHistory: [],
         vocalSignalsHistory: [],
@@ -165,6 +179,10 @@ export const useSessionStore = create<SessionStore>()(
     setMicActive: (active) => set({ micActive: active }),
     setAnnotatedFaceFrame: (frame) => set({ annotatedFaceFrame: frame }),
     setFace: (faceData) => set({ face: faceData }),
+    setActiveCase: (caseData) => set({ activeCase: caseData }),
+    setCaseAnalysis: (res) => set({ caseAnalysis: res }),
+    setIsRecordingInterview: (recording) => set({ isRecordingInterview: recording }),
+
 
     setUploadedVoice: (result) => {
       if (!result) {
@@ -329,6 +347,7 @@ export const useSessionStore = create<SessionStore>()(
         voice: activeVoice,
         text: frame.text,
         fusion: frame.fusion,
+        ...(frame.case_analysis ? { caseAnalysis: frame.case_analysis } : {}),
         voiceHistory: updatedVoiceHistory,
         voiceFeatureHistory: updatedVoiceFeatureHistory,
         truthScoreHistory: updatedTruthHistory,

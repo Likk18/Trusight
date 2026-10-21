@@ -4,6 +4,7 @@ import { FileText, Mic } from 'lucide-react';
 
 export const LiveTranscriptStrip: React.FC = () => {
   const text = useSessionStore((s) => s.text);
+  const caseAnalysis = useSessionStore((s) => s.caseAnalysis);
   const elapsedSeconds = useSessionStore((s) => s.elapsedSeconds);
   const sessionState = useSessionStore((s) => s.sessionState);
 
@@ -16,7 +17,7 @@ export const LiveTranscriptStrip: React.FC = () => {
     return `${h}:${m}:${s}`;
   };
 
-  const transcript = text?.transcript || 'I was at home last night.';
+  const transcript = caseAnalysis?.transcript || text?.transcript || 'I was at home last night.';
 
   return (
     <div
@@ -94,6 +95,38 @@ export const LiveTranscriptStrip: React.FC = () => {
         >
           Subject
         </span>
+
+        {caseAnalysis && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              fontFamily: 'Space Grotesk, sans-serif',
+              background: caseAnalysis.verdict === 'Entailment'
+                ? 'rgba(16, 185, 129, 0.15)'
+                : caseAnalysis.verdict === 'Contradiction'
+                ? 'rgba(239, 68, 68, 0.15)'
+                : 'rgba(0, 212, 255, 0.15)',
+              color: caseAnalysis.verdict === 'Entailment'
+                ? '#10b981'
+                : caseAnalysis.verdict === 'Contradiction'
+                ? '#f87171'
+                : '#00d4ff',
+              border: `1px solid ${
+                caseAnalysis.verdict === 'Entailment'
+                  ? 'rgba(16, 185, 129, 0.4)'
+                  : caseAnalysis.verdict === 'Contradiction'
+                  ? 'rgba(239, 68, 68, 0.4)'
+                  : 'rgba(0, 212, 255, 0.4)'
+              }`,
+              borderRadius: 4,
+              padding: '1px 7px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {caseAnalysis.verdict} ({caseAnalysis.confidence}%)
+          </span>
+        )}
 
         {/* Transcript Text */}
         <span

@@ -19,6 +19,7 @@ class ReportRequest(BaseModel):
     voice_data: VoiceAnalysisResponse | None = Field(None, description="Optional snapshot of voice analysis data")
     text_data: TextAnalysisResponse | None = Field(None, description="Optional snapshot of text analysis data")
     fusion_data: FusionResponse | None = Field(None, description="Optional snapshot of fusion analysis data")
+    case_data: dict | None = Field(None, description="Optional snapshot of case evidence and NLI verification")
 
 
 class ReportResponse(BaseModel):

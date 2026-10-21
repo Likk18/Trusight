@@ -109,6 +109,53 @@ export interface FusionResponse {
 }
 
 // ──────────────────────────────────────────────────────
+// Case Evidence & NLI Analysis
+// ──────────────────────────────────────────────────────
+export interface CaseReportData {
+  case_id: string;
+  filename: string;
+  pages: number;
+  chunks: number;
+}
+
+export interface CaseEvidenceItem {
+  text: string;
+  page: number;
+  distance: number;
+}
+
+export interface ConflictingElement {
+  type: string;
+  interview: string;
+  evidence: string;
+  page?: number;
+}
+
+export interface CaseExplanation {
+  summary: string;
+  interview_statement: string;
+  evidence_statement: string;
+  conflicting_elements: ConflictingElement[];
+  verdict: string;
+  confidence: number;
+  conflict_validated: boolean;
+  ollama_available: boolean;
+  error?: string | null;
+}
+
+export interface CaseAnalysisResult {
+  status: string;
+  case_id: string;
+  transcript: string;
+  verdict: 'Entailment' | 'Neutral' | 'Contradiction' | 'No Statement' | 'No Evidence';
+  confidence: number;
+  evidence: CaseEvidenceItem[];
+  explanation: CaseExplanation;
+  conflict_validated: boolean;
+  timestamp?: string;
+}
+
+// ──────────────────────────────────────────────────────
 // WebSocket Telemetry Frame (1Hz)
 // ──────────────────────────────────────────────────────
 export interface SegmentInfo {
@@ -127,6 +174,7 @@ export interface TelemetryFrame {
   voice: VoiceAnalysisResponse;
   text: TextAnalysisResponse;
   fusion: FusionResponse;
+  case_analysis?: CaseAnalysisResult | null;
 }
 
 // ──────────────────────────────────────────────────────

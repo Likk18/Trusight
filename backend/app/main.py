@@ -8,6 +8,20 @@ Startup sequence:
 4. Mount WebSocket telemetry endpoint
 5. Configure CORS middleware
 """
+import os
+
+# Prevent transformers from probing or importing TensorFlow
+os.environ["USE_TF"] = "0"
+os.environ["USE_TORCH"] = "1"
+
+# Suppress strict Protobuf gencode/runtime mismatch checks (e.g. gencode 6.x vs runtime 5.x)
+try:
+    import google.protobuf.runtime_version as _pb_runtime
+    _pb_runtime.ValidateProtobufRuntimeVersion = lambda *args, **kwargs: None
+    _pb_runtime._ReportVersionError = lambda *args, **kwargs: None
+except Exception:
+    pass
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,6 +69,12 @@ app.add_middleware(
 app.include_router(api_v1_router)
 app.include_router(ws_router)
 
+# Compatibility aliases matching 'final' endpoints
+from app.modules.case_analysis.router import upload_case_pdf, case_audio_websocket
+
+app.post("/case", tags=["Case Analysis & Evidence"], include_in_schema=False)(upload_case_pdf)
+app.websocket("/ws/audio/{case_id}")(case_audio_websocket)
+
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -64,5 +84,6 @@ async def root():
         "status": "operational",
         "docs": "/docs",
         "health": "/api/v1/health",
-        "websocket": "ws://localhost:8000/ws/telemetry",
+        "websocket_telemetry": "ws://localhost:8000/ws/telemetry",
+        "websocket_interview": "ws://localhost:8000/api/v1/case/ws/{case_id}",
     }
