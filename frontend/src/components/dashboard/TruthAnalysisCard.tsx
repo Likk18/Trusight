@@ -87,6 +87,7 @@ export const TruthAnalysisCard: React.FC = () => {
   const face = useSessionStore((s) => s.face);
   const voice = useSessionStore((s) => s.voice);
   const text = useSessionStore((s) => s.text);
+  const caseAnalysis = useSessionStore((s) => s.caseAnalysis);
   const segmentElapsed = useSessionStore((s) => s.segmentElapsed);
 
   const faceScore = face?.face_score ?? 82;
@@ -152,6 +153,51 @@ export const TruthAnalysisCard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Case Evidence NLI Classification Badge (If Active) ──────── */}
+      {caseAnalysis && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: caseAnalysis.verdict === 'Entailment'
+              ? 'rgba(16, 185, 129, 0.12)'
+              : caseAnalysis.verdict === 'Contradiction'
+              ? 'rgba(239, 68, 68, 0.12)'
+              : 'rgba(0, 212, 255, 0.12)',
+            border: `1px solid ${
+              caseAnalysis.verdict === 'Entailment'
+                ? 'rgba(16, 185, 129, 0.35)'
+                : caseAnalysis.verdict === 'Contradiction'
+                ? 'rgba(239, 68, 68, 0.35)'
+                : 'rgba(0, 212, 255, 0.35)'
+            }`,
+            borderRadius: 5,
+            padding: '2px 8px',
+            margin: '2px 0 4px',
+            fontSize: 9.5,
+            fontFamily: 'Space Grotesk',
+          }}
+        >
+          <span style={{ color: '#94a3b8' }}>Case NLI:</span>
+          <span
+            style={{
+              fontWeight: 800,
+              color: caseAnalysis.verdict === 'Entailment'
+                ? '#10b981'
+                : caseAnalysis.verdict === 'Contradiction'
+                ? '#f87171'
+                : '#00d4ff',
+            }}
+          >
+            {caseAnalysis.verdict} ({caseAnalysis.confidence}%)
+          </span>
+          <span style={{ color: '#64748b' }}>
+            {caseAnalysis.conflict_validated ? '• Conflict Validated' : '• Grounded'}
+          </span>
+        </div>
+      )}
 
       {/* ── 3 Horizontal Circular Gauges (Clean, No Delta Increase) ────── */}
       <div

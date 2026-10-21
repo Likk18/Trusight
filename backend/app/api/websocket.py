@@ -14,6 +14,8 @@ from app.shared.logger import get_logger
 router = APIRouter(tags=["WebSocket"])
 logger = get_logger(__name__)
 
+from app.modules.case_analysis.service import list_cases, get_latest_analysis
+
 # Track latched scores per segment
 _latched_scores = {
     "face_score": 88.0,
@@ -31,13 +33,34 @@ def _make_telemetry_frame(tick: int) -> dict:
     segment_elapsed_sec = (tick % 10) + 1  # 1 to 10
     is_boundary = (segment_elapsed_sec == 10)
 
+    # Check for active case analysis data
+    active_cases = list_cases()
+    latest_case_analysis = None
+    if active_cases:
+        latest_cid = active_cases[-1]["case_id"]
+        latest_case_analysis = get_latest_analysis(latest_cid)
+
     # If at boundary (second 10), compute the newly evaluated segment scores
     if is_boundary or tick == 0:
         face_score = clamp(simulate_variance(88.0, 3.5))
         voice_deception = clamp(simulate_variance(32.0, 4.0))
         voice_score = clamp(100.0 - voice_deception)
         text_score = clamp(simulate_variance(91.0, 3.0))
-        evidence_score = clamp(simulate_variance(85.0, 2.5))
+
+        # Dynamically link evidence score to case analysis if available
+        if latest_case_analysis:
+            c_verdict = latest_case_analysis.get("verdict")
+            if c_verdict == "Entailment":
+                evidence_score = clamp(simulate_variance(94.0, 2.0))
+            elif c_verdict == "Contradiction":
+                if latest_case_analysis.get("conflict_validated"):
+                    evidence_score = clamp(simulate_variance(22.0, 4.0))
+                else:
+                    evidence_score = clamp(simulate_variance(48.0, 4.0))
+            else:
+                evidence_score = clamp(simulate_variance(68.0, 3.0))
+        else:
+            evidence_score = clamp(simulate_variance(85.0, 2.5))
 
         truth_likelihood = clamp(
             face_score * 0.20 + voice_score * 0.24 + text_score * 0.28 + evidence_score * 0.18
@@ -59,6 +82,7 @@ def _make_telemetry_frame(tick: int) -> dict:
     evidence_score = _latched_scores["evidence_score"]
     truth_likelihood = _latched_scores["fusion_score"]
     fusion_confidence = _latched_scores["confidence"]
+
 
     return {
         "tick": tick,
@@ -112,12 +136,17 @@ def _make_telemetry_frame(tick: int) -> dict:
         },
         "text": {
             "text_score": round(text_score, 1),
-            "confidence": 91.0,
+            "confidence": round(latest_case_analysis.get("confidence", 91.0), 1) if latest_case_analysis else 91.0,
             "transcript": (
-                "I arrived at the office around 10:15 AM. I had a meeting with the team and "
-                "we discussed the new project requirements. After that, I worked on the "
-                "proposal and submitted it by 2 PM."
+                latest_case_analysis.get("transcript")
+                if latest_case_analysis and latest_case_analysis.get("transcript")
+                else (
+                    "I arrived at the office around 10:15 AM. I had a meeting with the team and "
+                    "we discussed the new project requirements. After that, I worked on the "
+                    "proposal and submitted it by 2 PM."
+                )
             ),
+            "verdict": latest_case_analysis.get("verdict") if latest_case_analysis else "Entailment",
             "highlighted_statements": [
                 {"text": "10:15 AM", "status": "SUPPORTED", "evidence": "Calendar Event / Login Log"},
                 {"text": "meeting", "status": "UNCERTAIN", "evidence": "No direct calendar invite found"},
@@ -130,12 +159,17 @@ def _make_telemetry_frame(tick: int) -> dict:
                 {"source": "Email Record", "claim": "Sent at 1:58 PM", "result": "SUPPORTED"},
                 {"source": "System Log", "claim": "Login at 10:12 AM", "result": "SUPPORTED"},
             ],
-            "key_reasons": [
-                "High linguistic consistency across statements",
-                "Low uncertainty phrasing / hedging words",
-                "Clear syntactic structures",
-            ],
+            "key_reasons": (
+                [latest_case_analysis.get("explanation", {}).get("summary", "Verified against case evidence.")]
+                if latest_case_analysis and latest_case_analysis.get("explanation")
+                else [
+                    "High linguistic consistency across statements",
+                    "Low uncertainty phrasing / hedging words",
+                    "Clear syntactic structures",
+                ]
+            ),
         },
+        "case_analysis": latest_case_analysis,
         "fusion": {
             "truth_likelihood_pct": round(truth_likelihood, 1),
             "fusion_confidence_pct": round(fusion_confidence, 1),

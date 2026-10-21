@@ -819,6 +819,64 @@ async def generate_report(request: ReportRequest) -> ReportResponse:
     story.append(sys_table)
     story.append(Spacer(1, 0.4 * cm))
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # CASE EVIDENCE & NLI VERIFICATION AUDIT (If Case Data Present)
+    # ══════════════════════════════════════════════════════════════════════════
+    if request.case_data:
+        case_info = request.case_data
+        c_verdict = case_info.get("verdict", "N/A")
+        c_conf = case_info.get("confidence", 0)
+        c_expl = case_info.get("explanation", {}) or {}
+        c_summary = c_expl.get("summary", "")
+        c_conflicts = c_expl.get("conflicting_elements", []) or []
+
+        case_story = [
+            HRFlowable(width="100%", thickness=1, color=COLOR_PURPLE, spaceBefore=6, spaceAfter=6),
+            Paragraph("CASE EVIDENCE & NLI CONTRADICTION AUDIT", styles["section_heading"]),
+            Paragraph(
+                f"<b>Case File:</b> {case_info.get('filename', 'Attached Document')} | "
+                f"<b>NLI Classification:</b> {c_verdict} ({c_conf}%) | "
+                f"<b>Conflict Validated:</b> {'YES' if case_info.get('conflict_validated') else 'NO'}",
+                styles["cell_regular"],
+            ),
+            Spacer(1, 0.2 * cm),
+        ]
+        if c_summary:
+            case_story.append(
+                Paragraph(f"<b>Evidence Synthesis:</b> {c_summary}", styles["cell_regular"])
+            )
+            case_story.append(Spacer(1, 0.2 * cm))
+
+        if c_conflicts:
+            c_rows = [
+                [
+                    Paragraph("Type", styles["cell_cyan"]),
+                    Paragraph("Interview Claim", styles["cell_cyan"]),
+                    Paragraph("Case Evidence Record", styles["cell_cyan"]),
+                    Paragraph("Page", styles["cell_cyan"]),
+                ]
+            ]
+            for c in c_conflicts:
+                c_rows.append([
+                    Paragraph(str(c.get("type", "detail")).upper(), styles["cell_bold"]),
+                    Paragraph(str(c.get("interview", "")), styles["cell_regular"]),
+                    Paragraph(str(c.get("evidence", "")), styles["cell_regular"]),
+                    Paragraph(str(c.get("page", "-")), styles["cell_bold"]),
+                ])
+            c_table = Table(c_rows, colWidths=[2.5 * cm, 6.5 * cm, 7.5 * cm, 1.5 * cm])
+            c_table.setStyle(
+                TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, -1), COLOR_CARD_BG),
+                    ("GRID", (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+                    ("PADDING", (0, 0), (-1, -1), 4),
+                ])
+            )
+            case_story.append(c_table)
+            case_story.append(Spacer(1, 0.3 * cm))
+
+        story.append(KeepTogether(case_story))
+
+
     # Forensic Chain of Custody & Security Certification
     story.append(
         KeepTogether([

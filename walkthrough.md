@@ -9,8 +9,8 @@ A quick-reference guide with copy-pasteable commands to run and test both backen
 Open **Terminal 1** (PowerShell):
 
 ```powershell
-cd D:\Projects\Trusight\backend
-$env:PYTHONPATH = "D:\Projects\Trusight\backend"
+cd D:\Trusight\backend
+$env:PYTHONPATH = "D:\Trusight\backend"
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
@@ -27,7 +27,7 @@ $env:PYTHONPATH = "D:\Projects\Trusight\backend"
 Open **Terminal 2** (PowerShell):
 
 ```powershell
-cd D:\Projects\Trusight\frontend
+cd D:\Trusight\frontend
 npm run dev
 ```
 
@@ -40,7 +40,7 @@ npm run dev
 To verify all 7 API endpoints, the live Voice ML model, report generation, and WebSocket telemetry:
 
 ```powershell
-cd D:\Projects\Trusight
+cd D:\Trusight
 & ".\backend\.venv\Scripts\python.exe" test_backend.py
 ```
 
@@ -53,7 +53,7 @@ cd D:\Projects\Trusight
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/voice/analyze-file" `
   -Method Post `
   -Form @{
-    audio = Get-Item "D:\Projects\Trusight\backend\app\modules\voice\sample_audio\truthful.wav"
+    audio = Get-Item "D:\Trusight\backend\app\modules\voice\sample_audio\truthful.wav"
     session_id = "test_cli_sess"
   }
 ```

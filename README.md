@@ -110,17 +110,25 @@ tru-sight/
 ```bash
 cd backend
 
-# Create and activate virtual environment (recommended)
+# Create a virtual environment (recommended)
 python -m venv .venv
-.venv\Scripts\activate   # Windows
-# source .venv/bin/activate  # macOS/Linux
+
+# Activate it
+# Windows PowerShell
+. .\.venv\Scripts\Activate.ps1
+# Windows cmd
+# .venv\Scripts\activate.bat
+# macOS/Linux
+# source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Start the development server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+# If Windows reports WinError 10013 / socket access denied, another process is using port 8000.
+# Use 127.0.0.1 for local-only dev or stop the stale server first.
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+``` 
 
 Backend will be available at:
 - **API:** `http://localhost:8000`
@@ -180,7 +188,7 @@ VITE_API_BASE_URL=http://localhost:8000
 
 ## Switching from SQLite to PostgreSQL
 
-Change **only one line** in `backend/.env`:
+ChScripts\activate   ange **only one line** in `backend/.env`:
 
 ```env
 DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/trusight

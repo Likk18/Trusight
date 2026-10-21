@@ -92,3 +92,12 @@ backend/app/modules/face_backup/
 .superpowers/
 .opencode/
 .opencode.json
+
+# Trained ML model weights
+backend/models/
+*.safetensors
+*.faiss
+*.index
+
+# Temporary debugging files
+backend/import_err.txt

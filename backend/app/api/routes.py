@@ -5,6 +5,7 @@ from app.modules.voice.router import router as voice_router
 from app.modules.text.router import router as text_router
 from app.modules.fusion.router import router as fusion_router
 from app.modules.reports.router import router as reports_router
+from app.modules.case_analysis.router import router as case_router
 from app.api.health import router as health_router
 
 # Create the v1 prefix router
@@ -16,4 +17,5 @@ api_v1_router.include_router(voice_router)
 api_v1_router.include_router(text_router)
 api_v1_router.include_router(fusion_router)
 api_v1_router.include_router(reports_router)
+api_v1_router.include_router(case_router)
 api_v1_router.include_router(health_router)
